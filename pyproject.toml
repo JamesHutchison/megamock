@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "megamock"
+version = "0.1.0"
+description = "Mega mocking capabilities"
+authors = ["James Hutchison <@JamesHutchison>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+varname = "^0.10.0"
+mypy = "^0.991"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
