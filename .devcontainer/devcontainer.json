@@ -9,9 +9,15 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bash .devcontainer/postCreateCommand.sh"
+	"postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
 	// Configure tool-specific properties.
 	// "customizations": {},
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	// "remoteUser": "root",
+	"extensions": [
+		"ms-python.python"
+	],
+	"settings": {
+		"python.defaultInterpreterPath": "/workspaces/python/.venv/python"
+	}
 }
