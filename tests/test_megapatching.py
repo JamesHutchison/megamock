@@ -1,17 +1,20 @@
 from megamock import MegaPatch
-from tests.simple_app.foo import Foo
+from tests.simple_app.foo import Foo, bar
+from tests.simple_app import foo
 
 
 class TestMegaPatchPatching:
     def test_patch_class(self) -> None:
         mocked = MegaPatch.it(Foo)
-        mocked.return_value.s = "arrr"
+        mocked.s = "arrr"
 
         f = Foo("")
         assert f.s == "arrr"
 
     def test_patch_global_module_variable(self) -> None:
-        pass
+        MegaPatch.it(bar, new="sooo")
+
+        assert foo.bar == "sooo"
 
     def test_patch_class_attribute(self) -> None:
         pass

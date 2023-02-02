@@ -1,23 +1,29 @@
 from __future__ import annotations
+import inspect
 import sys
 from typing import Any
 from unittest import mock
 from varname import argname
 
+from megamock.import_references import References
+
+# from megamock.custom_loader import WrappedObject
+
 
 class MegaPatch:
-    __reserved_names = {"_patch", "_thing", "_path", "_mocked_value"}
+    __reserved_names = {"_patches", "_thing", "_path", "_mocked_value"}
 
     def __init__(
-        self, thing: Any, path: str, patch: Any, mocked_value: mock.Mock
+        self, thing: Any, path: str, patches: Any, mocked_value: mock.Mock
     ) -> None:
-        self._patch = patch
+        self._patches = patches
         self._thing = thing
         self._path = path
         self._mocked_value: mock.Mock = mocked_value
 
     def start(self) -> None:
-        self._patch.start()
+        for patch in self._patches:
+            patch.start()
 
     @staticmethod
     def it(
@@ -31,19 +37,43 @@ class MegaPatch:
             ), "mocker does not appear to be a Mocker object"
 
         passed_in_name = argname("thing")
-        if module_path := getattr(thing, "__module__"):
-            mock_path = f"{module_path}.{passed_in_name}"
-        else:
+        # if isinstance(thing, WrappedObject):
+        #     thing = thing._obj
+        if not (module_path := getattr(thing, "__module__", None)):
             owning_class = MegaPatch._get_owning_class(passed_in_name)
             if owning_class:
-                mock_path = f"{owning_class.__module__}.{passed_in_name}"
-        mocked_value = mock.MagicMock(spec=thing)
-        patch_kwargs = {"return_value": mocked_value}
-        p = mocker.patch(mock_path, **(patch_kwargs | kwargs))
+                module_path = owning_class.__module__
+        if module_path is None:
+            module_path = MegaPatch.get_module_path_for_nonclass(passed_in_name)
+            patch_kwargs = {}
+            mocked_value = kwargs.get("new")
+        else:
+            mocked_value = mock.MagicMock(spec=thing)
+            patch_kwargs = {"return_value": mocked_value}
+        # mock_path = f"{module_path}.{passed_in_name}"
 
+        # if isinstance(getattr(sys.modules[module_path], passed_in_name), WrappedObject):
+        #     mock_path += "._orig_obj"
+        patches = []
+        for path in (
+            References.get_references(module_path, passed_in_name)
+            | References.reverse_references[module_path][passed_in_name]
+            | {module_path}
+        ):
+            mock_path = f"{path}.{passed_in_name}"
+            p = mocker.patch(mock_path, **(patch_kwargs | kwargs))
+            patches.append(p)
+
+        mega_patch = MegaPatch(thing, mock_path, patches, mocked_value)
         if autostart:
-            p.start()
-        return MegaPatch(thing, mock_path, p, mocked_value)
+            mega_patch.start()
+        return mega_patch
+
+    @staticmethod
+    def get_module_path_for_nonclass(passed_in_name: str) -> str:
+        stack = inspect.stack()
+        return inspect.getmodule(stack[2][0]).__name__
+        pass
 
     @staticmethod
     def _get_owning_class(name: str) -> str | None:

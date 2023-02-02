@@ -2,6 +2,8 @@ from functools import cached_property
 
 from tests.simple_app.helpful_manager import HelpfulManager
 
+bar = "bar"
+
 
 class Foo:
     moo = "cow"
