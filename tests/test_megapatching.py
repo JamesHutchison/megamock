@@ -1,9 +1,16 @@
+import pytest
 from megamock import MegaPatch
+from megamock.megapatching import MegaMock
 from tests.simple_app.foo import Foo, bar
 from tests.simple_app import foo
+from tests.simple_app.helpful_manager import HelpfulManager
 
 
 class TestMegaPatchPatching:
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        MegaPatch.stop_all()
+
     def test_patch_class_object(self) -> None:
         mocked = MegaPatch.it(Foo)
         mocked.z = "arrr"
@@ -22,7 +29,7 @@ class TestMegaPatchPatching:
         assert foo.bar == "sooo"
 
     def test_patch_class_attribute(self) -> None:
-        mocked = MegaPatch.it(Foo.moo, new="dog")
+        MegaPatch.it(Foo.moo, new="dog")
 
         assert Foo.moo == "dog"
 
@@ -36,13 +43,29 @@ class TestMegaPatchPatching:
 
         assert Foo("").moo == "dog"
 
+    def test_patch_property(self) -> None:
+        expected = "dog"
+        MegaPatch.it(Foo.moo, new=expected)
+
+        assert Foo("").moo == expected
+
+    def test_patch_cached_property(self) -> None:
+        expected = MegaMock(spec=HelpfulManager)
+        MegaPatch.it(Foo.helpful_manager, new=expected)
+
+        assert Foo("").helpful_manager == expected
+
 
 class TestMegaPatchAutoStart:
     def test_enabled_by_default(self) -> None:
-        pass
+        MegaPatch.it(Foo.helpful_manager, new="something")
+
+        assert Foo("").helpful_manager == "something"
 
     def test_can_be_disabled(self) -> None:
-        pass
+        MegaPatch.it(Foo.helpful_manager, new="something", autostart=False)
+
+        assert isinstance(Foo("").helpful_manager, HelpfulManager)
 
 
 class TestMegaPatchSpec:

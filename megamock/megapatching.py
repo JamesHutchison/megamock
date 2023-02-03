@@ -1,4 +1,5 @@
 from __future__ import annotations
+from functools import cached_property
 import inspect
 import sys
 from typing import Any
@@ -21,6 +22,7 @@ class MegaMock(mock.MagicMock):
 
 class MegaPatch:
     __reserved_names = {"_patches", "_thing", "_path", "_mocked_value"}
+    _active_patches: set[MegaPatch] = set()
 
     def __init__(
         self, thing: Any, path: str, patches: Any, mocked_value: MegaMock | Any
@@ -33,6 +35,17 @@ class MegaPatch:
     def start(self) -> None:
         for patch in self._patches:
             patch.start()
+        MegaPatch._active_patches.add(self)
+
+    def stop(self) -> None:
+        for patch in self._patches:
+            patch.stop()
+        MegaPatch._active_patches.remove(self)
+
+    @staticmethod
+    def stop_all() -> None:
+        for megapatch in list(MegaPatch._active_patches):
+            megapatch.stop()
 
     @staticmethod
     def it(
@@ -60,30 +73,35 @@ class MegaPatch:
             given_arg = "thing"
         if isinstance(thing, MegaMock):
             thing = thing._megamock_spec
+        if isinstance(thing, cached_property):
+            thing = thing.func
+            is_cached_property = True
+        else:
+            is_cached_property = False
 
         passed_in_name = argname(given_arg, vars_only=False)
         # if isinstance(thing, WrappedObject):
         #     thing = thing._obj
+
         if not (module_path := getattr(thing, "__module__", None)):
             owning_class = MegaPatch._get_owning_class(passed_in_name)
             if owning_class:
                 module_path = owning_class.__module__
         if module_path is None:
             module_path = MegaPatch.get_module_path_for_nonclass(passed_in_name)
-            patch_kwargs = {}
-            mocked_value = kwargs.get("new")
+            mocked_value = kwargs.get("new", MegaMock())
+            patch_kwargs = {"new": mocked_value}
         else:
             mock_kwargs = {"spec": thing}
-            mocked_value = MegaMock(**mock_kwargs)
+            if is_cached_property:
+                mocked_value = kwargs.get("new", MegaMock())
+            else:
+                mocked_value = MegaMock(**mock_kwargs)
             patch_kwargs = {"new": mocked_value}
             if klass:
                 mock_kwargs["return_value"] = mocked_value
                 patch_kwargs["new"] = MegaMock(**mock_kwargs)
 
-        # mock_path = f"{module_path}.{passed_in_name}"
-
-        # if isinstance(getattr(sys.modules[module_path], passed_in_name), WrappedObject):
-        #     mock_path += "._orig_obj"
         patches = []
         for path in (
             References.get_references(module_path, passed_in_name)
@@ -91,7 +109,7 @@ class MegaPatch:
             | {module_path}
         ):
             mock_path = f"{path}.{passed_in_name}"
-            p = mocker.patch(mock_path, **(patch_kwargs | kwargs))
+            p = mocker.patch(mock_path, **(patch_kwargs))
             patches.append(p)
 
         mega_patch = MegaPatch(thing, mock_path, patches, mocked_value)

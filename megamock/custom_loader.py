@@ -41,7 +41,11 @@ class ReferenceTrackerLoader(Loader):
         self._loader.exec_module(module, *args, **kwargs)
 
         stack = inspect.stack()
-        for frame in stack[3:]:
+        for frame in stack[2:]:
+            if frame.code_context is None:
+                continue
+            # if any(line.startswith("@") for line in frame.code_context):
+            #     continue
             calling_module = inspect.getmodule(frame[0])
             if calling_module:
                 break
