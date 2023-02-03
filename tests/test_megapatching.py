@@ -4,20 +4,37 @@ from tests.simple_app import foo
 
 
 class TestMegaPatchPatching:
-    def test_patch_class(self) -> None:
+    def test_patch_class_object(self) -> None:
         mocked = MegaPatch.it(Foo)
-        mocked.s = "arrr"
+        mocked.z = "arrr"
 
-        f = Foo("")
-        assert f.s == "arrr"
+        assert Foo.z == "arrr"
+
+    def test_patch_klass_argument(self) -> None:
+        mocked = MegaPatch.it(klass=Foo)
+        mocked.zzz = "arrr"
+
+        assert Foo("").zzz == "arrr"
 
     def test_patch_global_module_variable(self) -> None:
-        MegaPatch.it(bar, new="sooo")
+        mocked = MegaPatch.it(bar, new="sooo")
 
         assert foo.bar == "sooo"
 
     def test_patch_class_attribute(self) -> None:
-        pass
+        mocked = MegaPatch.it(Foo.moo, new="dog")
+
+        assert Foo.moo == "dog"
+
+    def test_patch_megamock_object(self) -> None:
+        MegaPatch.it(Foo)
+        MegaPatch.it(Foo.moo, new="dog")
+
+    def test_patch_megamock_klass_object(self) -> None:
+        mocked_foo = MegaPatch.it(klass=Foo)
+        mocked_foo.moo = "dog"
+
+        assert Foo("").moo == "dog"
 
 
 class TestMegaPatchAutoStart:

@@ -7,6 +7,7 @@ bar = "bar"
 
 class Foo:
     moo = "cow"
+    z = "z"
 
     def __init__(self, s: str) -> None:
         self._s = s
@@ -14,6 +15,10 @@ class Foo:
     @property
     def s(self) -> str:
         return self._s
+
+    @property
+    def zzz(self) -> str:
+        return self.z
 
     @cached_property
     def helpful_manager(self) -> HelpfulManager:

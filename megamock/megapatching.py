@@ -10,6 +10,15 @@ from megamock.import_references import References
 # from megamock.custom_loader import WrappedObject
 
 
+class MegaMock(mock.MagicMock):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._megamock_spec = kwargs.get("spec")
+
+    def _get_child_mock(self, /, **kw):
+        return MegaMock(**kw)
+
+
 class MegaPatch:
     __reserved_names = {"_patches", "_thing", "_path", "_mocked_value"}
 
@@ -27,8 +36,16 @@ class MegaPatch:
 
     @staticmethod
     def it(
-        thing: Any, autostart: bool = True, mocker: object | None = None, **kwargs: Any
+        thing: Any = None,
+        klass=None,
+        autostart: bool = True,
+        mocker: object | None = None,
+        **kwargs: Any,
     ) -> MegaPatch:
+        if thing is None and klass is None:
+            raise Exception("thing or klass required")
+        if thing and klass:
+            raise Exception("Use either thing or klass but not both")
         if mocker is None:
             mocker = mock
         else:
@@ -36,7 +53,15 @@ class MegaPatch:
                 mocker, "patch"
             ), "mocker does not appear to be a Mocker object"
 
-        passed_in_name = argname("thing")
+        if klass is not None:
+            thing = klass
+            given_arg = "klass"
+        else:
+            given_arg = "thing"
+        if isinstance(thing, MegaMock):
+            thing = thing._megamock_spec
+
+        passed_in_name = argname(given_arg, vars_only=False)
         # if isinstance(thing, WrappedObject):
         #     thing = thing._obj
         if not (module_path := getattr(thing, "__module__", None)):
@@ -48,8 +73,13 @@ class MegaPatch:
             patch_kwargs = {}
             mocked_value = kwargs.get("new")
         else:
-            mocked_value = mock.MagicMock(spec=thing)
-            patch_kwargs = {"return_value": mocked_value}
+            mock_kwargs = {"spec": thing}
+            mocked_value = MegaMock(**mock_kwargs)
+            patch_kwargs = {"new": mocked_value}
+            if klass:
+                mock_kwargs["return_value"] = mocked_value
+                patch_kwargs["new"] = MegaMock(**mock_kwargs)
+
         # mock_path = f"{module_path}.{passed_in_name}"
 
         # if isinstance(getattr(sys.modules[module_path], passed_in_name), WrappedObject):

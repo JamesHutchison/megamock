@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-varname = "^0.10.0"
+varname = {extras = ["asttokens"], version = "^0.10.0"}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

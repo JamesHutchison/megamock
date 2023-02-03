@@ -3,6 +3,7 @@ from .megapatching import MegaPatch
 
 
 import sys
+import asttokens
 
 sys.meta_path = [WrapperFinder(sys.meta_path[:])]
 
