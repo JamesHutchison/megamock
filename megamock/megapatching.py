@@ -3,7 +3,7 @@ import inspect
 import sys
 from typing import Any
 from unittest import mock
-from varname import argname
+from varname import argname  # type: ignore
 
 from megamock.import_references import References
 
@@ -23,12 +23,12 @@ class MegaPatch:
     __reserved_names = {"_patches", "_thing", "_path", "_mocked_value"}
 
     def __init__(
-        self, thing: Any, path: str, patches: Any, mocked_value: mock.Mock
+        self, thing: Any, path: str, patches: Any, mocked_value: MegaMock | Any
     ) -> None:
         self._patches = patches
         self._thing = thing
         self._path = path
-        self._mocked_value: mock.Mock = mocked_value
+        self._mocked_value: MegaMock = mocked_value
 
     def start(self) -> None:
         for patch in self._patches:
@@ -102,8 +102,9 @@ class MegaPatch:
     @staticmethod
     def get_module_path_for_nonclass(passed_in_name: str) -> str:
         stack = inspect.stack()
-        return inspect.getmodule(stack[2][0]).__name__
-        pass
+        module = inspect.getmodule(stack[2][0])
+        assert module
+        return module.__name__
 
     @staticmethod
     def _get_owning_class(name: str) -> str | None:
