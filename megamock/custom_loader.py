@@ -130,6 +130,14 @@ class WrapperLoader(Loader):
 
     def exec_module(self, module, *args, **kwargs):
         self._loader.exec_module(module, *args, **kwargs)
+
+        stack = inspect.stack()
+        # bunch of intermediate frames, may need to scan for good one, starting from 3
+        for frame in stack[3:]:
+            calling_module = inspect.getmodule(frame[0])
+            if calling_module:
+                break
+        assert calling_module
         for k in dir(sys.modules[module.__name__]):
-            References.add_reference(module, k)
+            References.add_reference(module, calling_module, k)
         # sys.modules[module.__name__] = WrappedModule(sys.modules[module.__name__])
