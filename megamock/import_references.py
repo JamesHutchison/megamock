@@ -1,5 +1,4 @@
 from collections import defaultdict
-import inspect
 from types import ModuleType
 
 

@@ -1,5 +1,5 @@
 from megamock.custom_loader import ReferenceTrackerFinder
-from .megapatching import MegaPatch
+from .megapatches import MegaPatch
 
 
 import sys

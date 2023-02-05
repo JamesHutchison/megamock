@@ -1,6 +1,6 @@
 import pytest
 from megamock import MegaPatch
-from megamock.megapatching import MegaMock
+from megamock.megapatches import MegaMock
 from tests.simple_app.foo import Foo, bar
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
@@ -68,12 +68,12 @@ class TestMegaPatchAutoStart:
 
 class TestMegaPatchSpec:
     def test_uses_autospec(self) -> None:
-        patch = MegaPatch.it(Foo)
+        MegaPatch.it(Foo)
 
-        Foo()
+        with pytest.raises(TypeError):
+            Foo()  # type: ignore
 
     def test_can_override_autospec(self) -> None:
-        pass
+        MegaPatch.it(Foo, autospec=False)
 
-    def test_can_provide_spec(self) -> None:
-        pass
+        Foo()  # type: ignore

@@ -35,7 +35,6 @@ class ReferenceTrackerLoader(Loader):
     def create_module(self, *args, **kwargs):
         module = self._loader.create_module(*args, **kwargs)
         return module
-        return WrappedModule(module)
 
     def exec_module(self, module, *args, **kwargs):
         self._loader.exec_module(module, *args, **kwargs)
@@ -44,8 +43,6 @@ class ReferenceTrackerLoader(Loader):
         for frame in stack[2:]:
             if frame.code_context is None:
                 continue
-            # if any(line.startswith("@") for line in frame.code_context):
-            #     continue
             calling_module = inspect.getmodule(frame[0])
             if calling_module:
                 break
