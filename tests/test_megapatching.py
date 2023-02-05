@@ -11,22 +11,22 @@ class TestMegaPatchPatching:
     def setup(self) -> None:
         MegaPatch.stop_all()
 
-    def test_patch_class_object(self) -> None:
-        mocked = MegaPatch.it(Foo)
-        mocked.z = "arrr"
+    def test_patch_class_itself(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.new_value.z = "a"
 
-        assert Foo.z == "arrr"
+        assert Foo.z == "a"
 
-    def test_patch_klass_argument(self) -> None:
-        mocked = MegaPatch.it(klass=Foo)
-        mocked.zzz = "arrr"
+    def test_patch_class_instance(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.return_value.z = "b"
 
-        assert Foo("").zzz == "arrr"
+        assert Foo("").z == "b"
 
     def test_patch_global_module_variable(self) -> None:
-        mocked = MegaPatch.it(bar, new="sooo")
+        MegaPatch.it(bar, new="a")
 
-        assert foo.bar == "sooo"
+        assert foo.bar == "a"
 
     def test_patch_class_attribute(self) -> None:
         MegaPatch.it(Foo.moo, new="dog")
@@ -36,12 +36,6 @@ class TestMegaPatchPatching:
     def test_patch_megamock_object(self) -> None:
         MegaPatch.it(Foo)
         MegaPatch.it(Foo.moo, new="dog")
-
-    def test_patch_megamock_klass_object(self) -> None:
-        mocked_foo = MegaPatch.it(klass=Foo)
-        mocked_foo.moo = "dog"
-
-        assert Foo("").moo == "dog"
 
     def test_patch_property(self) -> None:
         expected = "dog"
@@ -53,10 +47,14 @@ class TestMegaPatchPatching:
         expected = MegaMock(spec=HelpfulManager)
         MegaPatch.it(Foo.helpful_manager, new=expected)
 
-        assert Foo("").helpful_manager == expected
+        assert Foo("").helpful_manager is expected
 
 
 class TestMegaPatchAutoStart:
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        MegaPatch.stop_all()
+
     def test_enabled_by_default(self) -> None:
         MegaPatch.it(Foo.helpful_manager, new="something")
 
@@ -70,7 +68,9 @@ class TestMegaPatchAutoStart:
 
 class TestMegaPatchSpec:
     def test_uses_autospec(self) -> None:
-        pass
+        patch = MegaPatch.it(Foo)
+
+        Foo()
 
     def test_can_override_autospec(self) -> None:
         pass
