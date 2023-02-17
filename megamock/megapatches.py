@@ -7,7 +7,29 @@ from unittest import mock
 from varname import argname  # type: ignore
 
 from megamock.import_references import References
-from megamock.megamocks import _MegaMockMixin, MegaMock, MegaMockBehavior
+from megamock.megamocks import _MegaMockMixin, MegaMock
+
+
+class MegaPatchBehavior:
+    def __init__(
+        self,
+        *,
+        autospec: bool,
+    ) -> None:
+        """
+        Define the mocking behavior.
+
+        By default, MegaMock.it(...) will determine the behavior from the passed in
+        type. Pass in this class as the `behavior` argument to explicitly set the
+        behavior.
+
+        :param autospec: Autospec the thing being mocked
+        """
+        self.autospec = autospec
+
+    @staticmethod
+    def for_thing(thing: Any) -> MegaPatchBehavior:
+        return MegaPatchBehavior(autospec=True)
 
 
 class MegaPatch:
@@ -73,7 +95,7 @@ class MegaPatch:
         /,
         new: Any | None = None,
         spec_set=True,
-        behavior: MegaMockBehavior | None = None,
+        behavior: MegaPatchBehavior | None = None,
         autostart: bool = True,
         mocker: object | None = None,
         **kwargs: Any,
@@ -86,7 +108,7 @@ class MegaPatch:
             ), "mocker does not appear to be a Mocker object"
 
         if behavior is None:
-            behavior = MegaMockBehavior.from_thing(thing)
+            behavior = MegaPatchBehavior.for_thing(thing)
         if (autospec := kwargs.pop("autospec", None)) in (True, False):
             behavior.autospec = autospec
         return_value = kwargs.pop("return_value", MegaMock())
@@ -98,7 +120,7 @@ class MegaPatch:
                 )
                 return_value = new.return_value
             else:
-                new = MegaMock(return_value=return_value)  # , **mock_kwargs)
+                new = MegaMock(return_value=return_value)
 
         if isinstance(thing, _MegaMockMixin):
             thing = thing._megamock_spec

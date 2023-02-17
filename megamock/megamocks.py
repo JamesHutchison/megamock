@@ -1,5 +1,4 @@
 from __future__ import annotations
-import inspect
 from typing import Any
 from unittest import mock
 
@@ -58,37 +57,3 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
 
 class NonCallableMegaMock(_MegaMockMixin, mock.NonCallableMagicMock):
     pass
-
-
-class MegaMockBehavior:
-    def __init__(
-        self,
-        *,
-        autospec: bool,
-        nested_return_value: bool,
-    ) -> None:
-        """
-        Define the mocking behavior.
-
-        By default, MegaMock.it(...) will determine the behavior from the passed in
-        type. Pass in this class as the `behavior` argument to explicitly set the
-        behavior.
-
-        :param autospec: Autospec the thing being mocked
-        :param nested_return_value: The return value attribute in MegaMock is the
-            return value of the return value
-        """
-        self.autospec = autospec
-        self.nested_return_value = nested_return_value
-
-    @staticmethod
-    def from_thing(thing: Any) -> MegaMockBehavior:
-        if inspect.isclass(thing):
-            return MegaMockBehavior(
-                autospec=True,
-                nested_return_value=True
-                # spec_return_value=True,
-            )
-        if inspect.isfunction(thing):
-            return MegaMockBehavior(autospec=True, nested_return_value=False)
-        return MegaMockBehavior(autospec=True, nested_return_value=False)
