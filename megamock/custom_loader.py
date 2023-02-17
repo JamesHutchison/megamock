@@ -47,5 +47,7 @@ class ReferenceTrackerLoader(Loader):
             if calling_module:
                 break
         assert calling_module
+        if calling_module.__name__ == "importlib":
+            return
         for k in dir(sys.modules[module.__name__]):
             References.add_reference(module, calling_module, k)
