@@ -10,6 +10,12 @@ from megamock.import_references import References
 from megamock.megamocks import _MegaMockMixin, MegaMock
 
 
+class _MISSING:
+    """
+    Class to indicate a missing argument
+    """
+
+
 class MegaPatchBehavior:
     def __init__(
         self,
@@ -111,16 +117,28 @@ class MegaPatch:
             behavior = MegaPatchBehavior.for_thing(thing)
         if (autospec := kwargs.pop("autospec", None)) in (True, False):
             behavior.autospec = autospec
-        return_value = kwargs.pop("return_value", MegaMock())
+        return_value = kwargs.pop("return_value", _MISSING)
         if new is None:
-            # mock_kwargs = {}
             if behavior.autospec:
-                new = MegaMock.from_legacy_mock(
-                    mock.create_autospec(thing, spec_set=spec_set), spec=thing
-                )
+                autospeced = mock.create_autospec(thing, spec_set=spec_set)
+                if inspect.isfunction(autospeced):
+                    assert hasattr(autospeced, "return_value")
+                    if return_value is not _MISSING:
+                        autospeced.return_value = return_value
+                    new = autospeced
+                else:
+                    new = MegaMock.from_legacy_mock(
+                        mock.create_autospec(thing, spec_set=spec_set), spec=thing
+                    )
                 return_value = new.return_value
             else:
+                if return_value is _MISSING:
+                    return_value = MegaMock()
                 new = MegaMock(return_value=return_value)
+        else:
+            return_value = MegaMock()
+
+        assert return_value is not _MISSING
 
         if isinstance(thing, _MegaMockMixin):
             thing = thing._megamock_spec

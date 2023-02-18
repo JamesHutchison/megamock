@@ -1,5 +1,7 @@
 class NestedParent:
     class NestedChild:
         class AnotherNestedChild:
+            a = "a"
 
-            pass
+            def z(self) -> str:
+                return "z"

@@ -4,6 +4,11 @@ from megamock.megapatches import MegaMock
 from tests.simple_app.foo import Foo, bar
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
+from tests.simple_app.nested_classes import NestedParent
+from tests.simple_app.uses_nested_classes import (
+    get_nested_class_function_value,
+    get_nested_class_attribute_value,
+)
 
 
 class TestMegaPatchPatching:
@@ -48,6 +53,16 @@ class TestMegaPatchPatching:
         MegaPatch.it(Foo.helpful_manager, new=expected)
 
         assert Foo("").helpful_manager is expected
+
+    def test_patch_nested_class_function(self) -> None:
+        MegaPatch.it(NestedParent.NestedChild.AnotherNestedChild.z, return_value="a")
+
+        assert get_nested_class_function_value() == "a"
+
+    def test_patch_nested_class_attribute(self) -> None:
+        MegaPatch.it(NestedParent.NestedChild.AnotherNestedChild.a, new="z")
+
+        assert get_nested_class_attribute_value() == "z"
 
 
 class TestMegaPatchAutoStart:
