@@ -1,6 +1,7 @@
 import pytest
 from megamock import MegaPatch
 from megamock.megapatches import MegaMock
+from tests.simple_app.bar import some_func
 from tests.simple_app.foo import Foo, bar
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
@@ -92,3 +93,30 @@ class TestMegaPatchSpec:
         MegaPatch.it(Foo, autospec=False)
 
         Foo()  # type: ignore
+
+
+class TestMegaPatchReturnValue:
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        MegaPatch.stop_all()
+
+    def test_when_new_is_not_a_function_then_return_value_is_none(self) -> None:
+        patch = MegaPatch.it(bar, new="a")
+
+        assert patch.return_value is None
+
+    def test_return_value_when_mocking_a_function(self) -> None:
+        patch = MegaPatch.it(some_func)
+
+        assert patch.return_value is some_func("a")
+
+    def test_return_value_for_class_is_the_instance_object(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        assert patch.return_value is Foo("s")
+
+    def test_provided_return_value_is_the_return_value(self) -> None:
+        ret_val = MegaMock()
+        patch = MegaPatch.it(some_func, return_value=ret_val)
+
+        assert patch.return_value is ret_val

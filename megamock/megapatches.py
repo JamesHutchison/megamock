@@ -1,6 +1,7 @@
 from __future__ import annotations
 from functools import cached_property
 import inspect
+import logging
 import sys
 from typing import Any
 from unittest import mock
@@ -8,6 +9,8 @@ from varname import argname  # type: ignore
 
 from megamock.import_references import References
 from megamock.megamocks import _MegaMockMixin, MegaMock
+
+logger = logging.getLogger(__name__)
 
 
 class _MISSING:
@@ -96,6 +99,28 @@ class MegaPatch:
             megapatch.stop()
 
     @staticmethod
+    def _get_new_and_return_value_with_autospec(
+        behavior: MegaPatchBehavior, thing: Any, spec_set: bool, return_value: Any
+    ) -> tuple[Any, Any]:
+        if behavior.autospec:
+            autospeced = mock.create_autospec(thing, spec_set=spec_set)
+            if inspect.isfunction(autospeced):
+                assert hasattr(autospeced, "return_value")
+                if return_value is not _MISSING:
+                    autospeced.return_value = return_value
+                new = autospeced
+            else:
+                new = MegaMock.from_legacy_mock(
+                    mock.create_autospec(thing, spec_set=spec_set), spec=thing
+                )
+            return_value = new.return_value
+        else:
+            if return_value is _MISSING:
+                return_value = MegaMock()
+            new = MegaMock(return_value=return_value)
+        return new, return_value
+
+    @staticmethod
     def it(
         thing: Any = None,
         /,
@@ -117,26 +142,24 @@ class MegaPatch:
             behavior = MegaPatchBehavior.for_thing(thing)
         if (autospec := kwargs.pop("autospec", None)) in (True, False):
             behavior.autospec = autospec
-        return_value = kwargs.pop("return_value", _MISSING)
+        provided_return_value = kwargs.pop("return_value", _MISSING)
         if new is None:
             if behavior.autospec:
-                autospeced = mock.create_autospec(thing, spec_set=spec_set)
-                if inspect.isfunction(autospeced):
-                    assert hasattr(autospeced, "return_value")
-                    if return_value is not _MISSING:
-                        autospeced.return_value = return_value
-                    new = autospeced
-                else:
-                    new = MegaMock.from_legacy_mock(
-                        mock.create_autospec(thing, spec_set=spec_set), spec=thing
-                    )
-                return_value = new.return_value
+                new, return_value = MegaPatch._get_new_and_return_value_with_autospec(
+                    behavior, thing, spec_set, provided_return_value
+                )
             else:
-                if return_value is _MISSING:
+                if provided_return_value is _MISSING:
                     return_value = MegaMock()
+                else:
+                    return_value = provided_return_value
                 new = MegaMock(return_value=return_value)
         else:
-            return_value = MegaMock()
+            if hasattr(new, "return_value"):
+                logger.warning("Ignoring return_value argument when 'new' is provided")
+                return_value = new.return_value
+            else:
+                return_value = None
 
         assert return_value is not _MISSING
 
