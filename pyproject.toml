@@ -6,7 +6,7 @@ authors = ["James Hutchison <@JamesHutchison>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.10 <4.0"
 varname = {extras = ["asttokens"], version = "^0.10.0"}
 
 [tool.poetry.group.dev.dependencies]
