@@ -7,9 +7,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-varname = "^0.10.0"
-mypy = "^0.991"
+varname = {extras = ["asttokens"], version = "^0.10.0"}
 
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+mypy = "^0.991"
+flake8 = "^6.0.0"
+pytest = "^7.2.1"
 
 [build-system]
 requires = ["poetry-core"]
