@@ -18,7 +18,7 @@ MegaMock was created to address some shortcomings in the built-in Python library
   itself you want to patch. This even works for methods, attributes, and nested classes!
 - `mock.patch` has a gotcha where the string you provide must match where the reference lives.
   So, for example, if you have in `my_module.py`: `from other_module import Thing`, then doing
-  `mock.patch("other_module.Thing") won't actually work, because the reference in `my_module` still
+  `mock.patch("other_module.Thing")` won't actually work, because the reference in `my_module` still
   points to the original. You can work around this by doing `import other_module` and referencing `Thing`
   by `other_module.Thing`. MegaMock does not have this problem, and it doesn't matter how you import.
 
