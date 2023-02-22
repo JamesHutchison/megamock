@@ -23,3 +23,6 @@ class Foo:
     @cached_property
     def helpful_manager(self) -> HelpfulManager:
         return HelpfulManager()
+
+
+foo_instance = Foo("global")

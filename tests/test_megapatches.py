@@ -2,7 +2,7 @@ import pytest
 from megamock import MegaPatch
 from megamock.megapatches import MegaMock
 from tests.simple_app.bar import some_func
-from tests.simple_app.foo import Foo, bar
+from tests.simple_app.foo import Foo, bar, foo_instance
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
 from tests.simple_app.nested_classes import NestedParent
@@ -108,3 +108,19 @@ class TestMegaPatchReturnValue:
         patch = MegaPatch.it(some_func, return_value=ret_val)
 
         assert patch.return_value is ret_val
+
+
+class TestMegaPatchObject:
+    @pytest.mark.xfail
+    def test_patching_local_object(self) -> None:
+        my_obj = Foo("s")
+        MegaPatch.it(my_obj.moo, new="moooo")
+
+        assert Foo("s").moo == "cow"
+        assert my_obj.moo == "moooo"
+
+    def test_patching_module_level_object(self) -> None:
+        MegaPatch.it(foo_instance.moo, new="moooo")
+
+        assert Foo("s").moo == "cow"
+        assert foo_instance.moo == "moooo"
