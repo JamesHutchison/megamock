@@ -5,19 +5,16 @@ from megamock import start_loader, MegaPatch
 start_loader()
 
 
-class SomeObject:
-    def __init__(self, a):
+class SomeClass:
+    a: str | None
+
+    def __init__(self, a: str | None) -> None:
         self.a = a
 
     def b(self) -> str:
         return "b"
 
     c = 1
-
-
-@pytest.fixture
-def some_object() -> type[SomeObject]:
-    return SomeObject
 
 
 @pytest.fixture(autouse=True)
