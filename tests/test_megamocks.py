@@ -20,6 +20,17 @@ class TestMegaMock:
 
             mock_instance.b()
 
+        def test_can_create_mock_for_class_itself(self) -> None:
+            mock_class: type[SomeClass] = MegaMock(SomeClass, instance=False)
+
+            mock_class.c
+
+        def test_mock_classes_do_not_have_undefined_attributes(self) -> None:
+            mock_class: type[SomeClass] = MegaMock(SomeClass, instance=False)
+
+            with pytest.raises(AttributeError):
+                mock_class.a
+
         def test_annotated_attributes_are_allowed_if_spec_set_is_true(self) -> None:
             mock_instance: SomeClass = MegaMock(SomeClass, spec_set=True)
 
