@@ -3,8 +3,15 @@ from .megapatches import MegaPatch
 from .megamocks import MegaMock
 
 
-import sys
+def start_loader() -> None:
+    """
+    Start the MegaMock loader.
 
-sys.meta_path = [ReferenceTrackerFinder(sys.meta_path[:])]
+    This should be done as one of the first things when testing
+    """
+    import sys
+
+    sys.meta_path = [ReferenceTrackerFinder(sys.meta_path[:])]
+
 
 __all__ = ["MegaPatch", "MegaMock"]

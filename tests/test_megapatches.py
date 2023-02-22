@@ -13,10 +13,6 @@ from tests.simple_app.uses_nested_classes import (
 
 
 class TestMegaPatchPatching:
-    @pytest.fixture(autouse=True)
-    def setup(self) -> None:
-        MegaPatch.stop_all()
-
     def test_patch_class_itself(self) -> None:
         patch = MegaPatch.it(Foo)
         patch.new_value.z = "a"
@@ -67,10 +63,6 @@ class TestMegaPatchPatching:
 
 
 class TestMegaPatchAutoStart:
-    @pytest.fixture(autouse=True)
-    def setup(self) -> None:
-        MegaPatch.stop_all()
-
     def test_enabled_by_default(self) -> None:
         MegaPatch.it(Foo.helpful_manager, new="something")
 
@@ -96,10 +88,6 @@ class TestMegaPatchSpec:
 
 
 class TestMegaPatchReturnValue:
-    @pytest.fixture(autouse=True)
-    def setup(self) -> None:
-        MegaPatch.stop_all()
-
     def test_when_new_is_not_a_function_then_return_value_is_none(self) -> None:
         patch = MegaPatch.it(bar, new="a")
 
