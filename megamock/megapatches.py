@@ -76,6 +76,13 @@ class MegaPatch:
         return self._new_value
 
     @property
+    def mock(self) -> MegaMock:
+        val = self.new_value
+        if not isinstance(val, MegaMock) and not hasattr(val, "return_value"):
+            raise ValueError(f"New value {val!r} is not a mock!")
+        return val
+
+    @property
     def return_value(self) -> Any:
         return self._return_value
 

@@ -24,5 +24,8 @@ class Foo:
     def helpful_manager(self) -> HelpfulManager:
         return HelpfulManager()
 
+    def some_method(self) -> str:
+        return "value"
+
 
 foo_instance = Foo("global")

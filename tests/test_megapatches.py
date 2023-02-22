@@ -35,6 +35,28 @@ class TestMegaPatchPatching:
 
         assert Foo.moo == "dog"
 
+    def test_patch_class_method_supports_return_value_as_arg(self) -> None:
+        MegaPatch.it(Foo.some_method, return_value="foo")
+        assert Foo("s").some_method() == "foo"
+
+    def test_patch_class_method_supports_return_value_as_attribute(self) -> None:
+        megapatch = MegaPatch.it(Foo.some_method)
+        megapatch.new_value.return_value = "foo"
+        assert Foo("s").some_method() == "foo"
+
+    def test_mock_is_synonym_for_new_value_when_a_mock(self) -> None:
+        megapatch = MegaPatch.it(Foo.some_method)
+        megapatch.mock.return_value = "foo"
+        assert Foo("s").some_method() == "foo"
+
+    def test_mock_raises_type_error_if_new_value_is_not_a_mock(self) -> None:
+        megapatch = MegaPatch.it(Foo.some_method, new="foo")
+
+        with pytest.raises(ValueError) as exc:
+            megapatch.mock
+
+        assert str(exc.value) == "New value 'foo' is not a mock!"
+
     def test_patch_megamock_object(self) -> None:
         MegaPatch.it(Foo)
         MegaPatch.it(Foo.moo, new="dog")
