@@ -102,7 +102,7 @@ def test_something(...):
     ...
 ```
 
-You can focus your production code on creating an intuitive, batteries included interface for developers
+You can focus your production code on creating an intuitive, "batteries included" interface for developers
 without making compromises for testability.
 Please see the guidance section (TODO) for more information on how and when you would use MegaMock.
 
