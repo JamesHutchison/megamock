@@ -173,3 +173,8 @@ MegaPatch.it(
     return_value=...
 )
 ```
+
+# Behavior differences from `mock`
+- Using `MegaMock` is like using the `mock.create_autospec()` function
+- Using `MegaPatch` is like setting `autospec=True`
+- Mocking a class by default returns an instance of the class instead of a mocked type. This is like setting `instance=True`
