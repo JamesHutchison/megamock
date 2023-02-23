@@ -11,6 +11,9 @@ class TestMegaMock:
     def test_allows_no_args(self) -> None:
         MegaMock()
 
+    def test_return_value_when_no_args(self) -> None:
+        assert isinstance(MegaMock()(), MegaMock)
+
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:
             mock_instance: SomeClass = MegaMock(SomeClass)
@@ -65,6 +68,8 @@ class TestMegaMock:
 
             assert isinstance(mega_mock.b, MegaMock)
             assert isinstance(mega_mock.c, NonCallableMegaMock)
+
+            assert isinstance(mega_mock.return_value, NonCallableMegaMock)
 
         def test_when_regular_mock(self) -> None:
 
