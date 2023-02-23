@@ -1,13 +1,7 @@
 # MegaMock
 
-Pew pew! Mock objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-annotated paths!
-
-<details>
-    <summary>MegaMock - the painting - done in VR - first draft</summary>
-
-![MegaMock](docs/img/megamock-cropped.png)
-</details>
-<p>
+Pew pew! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-annotated paths!
+Also sane defaults for mocking behavior!
 
 # Why Use MegaMock?
 MegaMock was created to address some shortcomings in the built-in Python library:
@@ -173,3 +167,5 @@ MegaPatch.it(
     return_value=...
 )
 ```
+
+![MegaMock](docs/img/megamock-cropped.png)
