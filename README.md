@@ -2,9 +2,14 @@
 
 Pew pew! Mock objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-annotated paths!
 
-![MegaMock](docs/img/megamock-cropped.png)
+<details>
+    <summary>MegaMock - the painting - done in VR - first draft</summary>
 
-## Why Use MegaMock?
+![MegaMock](docs/img/megamock-cropped.png)
+</details>
+<p>
+
+# Why Use MegaMock?
 MegaMock was created to address some shortcomings in the built-in Python library:
 - Legacy code holds back "best practice" defaults, so many developers write sub-optimal mocks
   that allow things that should not be allowed. Likewise, writing better mocks are more work,
