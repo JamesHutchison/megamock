@@ -1,8 +1,8 @@
 import pytest
 
-from megamock import start_loader, MegaPatch
+from megamock import start_import_mod, MegaPatch
 
-start_loader()
+start_import_mod()
 
 
 class SomeClass:

@@ -69,7 +69,7 @@ TBD
 
 ### Usage
 
-Import and execution order is important for MegaMock. When running tests, you will need to execute the `start_loader`
+Import and execution order is important for MegaMock. When running tests, you will need to execute the `start_import_mod`
 function prior to importing any production or test code. You will also want it so the loader is not used in production.
 
 With `pytest`, this is easily done by adding a root level `conftest.py` file if it does not exist already, and executing
@@ -78,7 +78,7 @@ the function there.
 ```python
 import megamock
 
-megamock.start_loader()
+megamock.start_import_mod()
 ```
 
 In tests, the `MegaMock` class replaces the mock classes `MagicMock` and `Mock`. `MegaPatch.it(...)` replaces `patch(...)`.
