@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "megamock"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 description = "Mega mocking capabilities"
 authors = ["James Hutchison <jamesghutchison@proton.me>"]
 readme = "README.md"
