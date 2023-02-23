@@ -3,6 +3,12 @@ from typing import Any
 from unittest import mock
 
 
+class _MISSING:
+    """
+    Class to indicate a missing value
+    """
+
+
 class _MegaMockMixin:
     def __init__(
         self,
@@ -20,8 +26,9 @@ class _MegaMockMixin:
     ) -> None:
         self._megamock_spec = spec
 
-        # must be last
-        self.__wrapped = _wraps_mock
+        # !important!
+        # once __wrapped is set, future assignments will be on the wrapped object
+        # it MUST be last
         if _wraps_mock is None:
             if spec is not None:
                 autospeced_legacy_mock = mock.create_autospec(
@@ -30,6 +37,29 @@ class _MegaMockMixin:
                 self.__wrapped = autospeced_legacy_mock
             else:
                 super().__init__(**kwargs)
+        else:
+            self._mock_return_value_ = _wraps_mock.return_value
+            self.__wrapped = _wraps_mock
+
+    @property
+    def _mock_return_value(self) -> Any:
+        if self.__dict__.get("_MegaMockMixin__wrapped"):
+            if (
+                val := self.__dict__.get("_mock_return_value_cache", _MISSING)
+            ) == _MISSING:
+                if isinstance(
+                    self._mock_return_value_,
+                    mock.NonCallableMagicMock | mock.NonCallableMock,
+                ):
+                    val = self._mock_return_value_cache = MegaMock.from_legacy_mock(
+                        self._mock_return_value_, None
+                    )
+                else:
+                    val = self._mock_return_value_cache = self._mock_return_value_
+            return val
+        return self.__dict__.get(
+            "_mock_return_value", self.__class__._mock_return_value
+        )
 
     def _get_child_mock(self, /, **kw) -> MegaMock:
         return MegaMock(**kw)
@@ -37,7 +67,9 @@ class _MegaMockMixin:
     def __getattr__(self, key) -> Any:
         if (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")) is not None:
             result = getattr(wrapped, key)
-            if isinstance(result, mock.NonCallableMock | mock.NonCallableMagicMock):
+            if not isinstance(result, _MegaMockMixin) and isinstance(
+                result, mock.NonCallableMock | mock.NonCallableMagicMock
+            ):
                 mega_result = MegaMock.from_legacy_mock(
                     result, getattr(self._megamock_spec, key, None)
                 )

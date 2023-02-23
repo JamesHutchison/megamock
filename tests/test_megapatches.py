@@ -18,6 +18,11 @@ class TestMegaPatchPatching:
         patch.new_value.z = "a"
 
         assert Foo.z == "a"
+        Foo("s")  # should work
+
+        # sanity check, instance should NOT work because it doesn't support calling
+        with pytest.raises(TypeError):
+            Foo("s")()  # type: ignore
 
     def test_patch_class_instance(self) -> None:
         patch = MegaPatch.it(Foo)
