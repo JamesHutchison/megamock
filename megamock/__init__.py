@@ -52,4 +52,4 @@ def start_import_mod() -> None:
     builtins.__import__ = new_import
 
 
-__all__ = ["MegaPatch", "MegaMock"]
+__all__ = ["MegaPatch", "MegaMock", "start_import_mod"]
