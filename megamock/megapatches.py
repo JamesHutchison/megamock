@@ -117,9 +117,7 @@ class MegaPatch:
                     autospeced.return_value = return_value
                 new = autospeced
             else:
-                new = MegaMock.from_legacy_mock(
-                    mock.create_autospec(thing, spec_set=spec_set), spec=thing
-                )
+                new = MegaMock.from_legacy_mock(autospeced, spec=thing)
             return_value = new.return_value
         else:
             if return_value is _MISSING:

@@ -1,8 +1,9 @@
 import pytest
 from megamock import MegaPatch
 from megamock.megapatches import MegaMock
-from tests.simple_app.bar import some_func
+from tests.simple_app.bar import some_func, Bar
 from tests.simple_app.foo import Foo, bar, foo_instance
+from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
 from tests.simple_app.nested_classes import NestedParent
@@ -18,6 +19,11 @@ class TestMegaPatchPatching:
         patch.new_value.z = "a"
 
         assert Foo.z == "a"
+        Foo("s")  # should work
+
+        # sanity check, instance should NOT work because it doesn't support calling
+        with pytest.raises(TypeError):
+            Foo("s")()  # type: ignore
 
     def test_patch_class_instance(self) -> None:
         patch = MegaPatch.it(Foo)
@@ -83,6 +89,13 @@ class TestMegaPatchPatching:
 
         assert get_nested_class_attribute_value() == "z"
 
+    # Issue https://github.com/JamesHutchison/megamock/issues/13
+    @pytest.mark.xfail
+    def test_patch_renamed_var(self) -> None:
+        MegaPatch.it(OtherFoo.some_method, return_value="sm")
+
+        assert Foo("s").some_method() == "sm"
+
 
 class TestMegaPatchAutoStart:
     def test_enabled_by_default(self) -> None:
@@ -131,8 +144,23 @@ class TestMegaPatchReturnValue:
 
         assert patch.return_value is ret_val
 
+    def test_patch_return_value_is_not_assignable(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        with pytest.raises(AttributeError):
+            patch.return_value = 5  # type: ignore
+
+    def test_return_value_has_changable_return_value(self) -> None:
+        patch = MegaPatch.it(Bar)
+
+        patch.return_value.return_value = "something"
+
+        assert Bar()() == "something"
+
 
 class TestMegaPatchObject:
+
+    # Issue https://github.com/JamesHutchison/megamock/issues/8
     @pytest.mark.xfail
     def test_patching_local_object(self) -> None:
         my_obj = Foo("s")

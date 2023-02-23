@@ -5,11 +5,16 @@ import pytest
 from megamock import MegaMock
 from megamock.megamocks import NonCallableMegaMock
 from tests.conftest import SomeClass
+from tests.simple_app.bar import Bar
+from tests.simple_app.foo import Foo
 
 
 class TestMegaMock:
     def test_allows_no_args(self) -> None:
         MegaMock()
+
+    def test_return_value_when_no_args(self) -> None:
+        assert isinstance(MegaMock()(), MegaMock)
 
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:
@@ -55,6 +60,28 @@ class TestMegaMock:
             with pytest.raises(AttributeError):
                 mock_instance.does_not_exist = 5  # type: ignore
 
+        def test_callable_classes_are_callable(self) -> None:
+            mock_instance = MegaMock(Bar)
+
+            mock_instance()
+
+        # The return type for callable is not inspected, so a generic MegaMock
+        # is always used. To support this, the annotated return type for __call__
+        # would need to be inspected
+        # Issue https://github.com/JamesHutchison/megamock/issues/14
+        @pytest.mark.xfail
+        def test_callable_result_has_same_callable_property(self) -> None:
+            mock_instance = MegaMock(Bar)
+
+            with pytest.raises(TypeError):
+                mock_instance()()
+
+        def test_noncallable_classes_are_not_callable(self) -> None:
+            mock_instance = MegaMock(Foo)
+
+            with pytest.raises(TypeError):
+                mock_instance()
+
     class TestFromLegacyMock:
         def test_when_autospec_used_on_class(self) -> None:
             legacy_mock = mock.create_autospec(SomeClass)
@@ -65,6 +92,8 @@ class TestMegaMock:
 
             assert isinstance(mega_mock.b, MegaMock)
             assert isinstance(mega_mock.c, NonCallableMegaMock)
+
+            assert isinstance(mega_mock.return_value, NonCallableMegaMock)
 
         def test_when_regular_mock(self) -> None:
 

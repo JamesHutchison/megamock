@@ -1,13 +1,9 @@
 # MegaMock
 
-Pew pew! Mock objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-annotated paths!
+Pew pew! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-annotated paths!
+Also sane defaults for mocking behavior!
 
-<details>
-    <summary>MegaMock - the painting - done in VR - first draft</summary>
-
-![MegaMock](docs/img/megamock-cropped.png)
-</details>
-<p>
+Supported Python Versions: 3.10+
 
 # Why Use MegaMock?
 MegaMock was created to address some shortcomings in the built-in Python library:
@@ -69,7 +65,7 @@ def test_something(...):
 
 ### Usage
 
-Import and execution order is important for MegaMock. When running tests, you will need to execute the `start_loader`
+Import and execution order is important for MegaMock. When running tests, you will need to execute the `start_import_mod`
 function prior to importing any production or test code. You will also want it so the loader is not used in production.
 
 With `pytest`, this is easily done by adding a root level `conftest.py` file if it does not exist already, and executing
@@ -78,7 +74,7 @@ the function there.
 ```python
 import megamock
 
-megamock.start_loader()
+megamock.start_import_mod()
 ```
 
 In tests, the `MegaMock` class replaces the mock classes `MagicMock` and `Mock`. `MegaPatch.it(...)` replaces `patch(...)`.
@@ -136,26 +132,50 @@ from my_module import MyClass
 mock_class = MegaMock(MyClass, instance=False)
 ```
 
-Mocking a class method:
+Patching a class method:
 
 ```python
 from my_module import MyClass
 
-mock_method = MegaPatch.it(MyClass.my_method, return_value=...)
+mega_patch = MegaPatch.it(MyClass.my_method, return_value=...)
 ```
 
 Alternatively:
 ```python
-mock_method = MegaPatch.it(MyClass.my_method)
-mock_method.mock.return_value = ...
+mega_patch = MegaPatch.it(MyClass.my_method)
+mega_patch.mock.return_value = ...
 ```
 
 ```python
-mock_method = MegaPatch.it(MyClass.my_method)
-mock_method.new_value.return_value = ...
+mega_patch = MegaPatch.it(MyClass.my_method)
+mega_patch.new_value.return_value = ...
 ```
 
-Mocking a module attribute:
+You can also alter the return value of your mock without creating a separate mock object first.
+
+```python
+mega_patch.return_value.user = SomeUser()
+```
+
+Working with `MegaPatch` and classes:
+
+`mega_patch.new_value` is the class _type_ itself
+
+```python
+mega_patch = MegaPatch.it(MyClass)
+
+mega_patch.new_value.x is MyClass.x
+```
+
+`mega_patch.return_value` is the class _instance_ returned
+
+```python
+megaa_patch = MegaPatch.it(MyClass)
+
+mega_patch.return_value is MyClass()
+```
+
+Patching a module attribute:
 
 ```python
 import my_module
@@ -163,7 +183,7 @@ import my_module
 MegaPatch.it(my_module.some_attribute, new=...)
 ```
 
-Mocking a method of a nested class:
+Patching a method of a nested class:
 
 ```python
 import my_module
@@ -178,3 +198,7 @@ MegaPatch.it(
 - Using `MegaMock` is like using the `mock.create_autospec()` function
 - Using `MegaPatch` is like setting `autospec=True`
 - Mocking a class by default returns an instance of the class instead of a mocked type. This is like setting `instance=True`
+
+# Art Gallery
+
+![MegaMock](docs/img/megamock-cropped.png)
