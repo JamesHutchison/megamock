@@ -3,6 +3,8 @@
 Pew pew! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-annotated paths!
 Also sane defaults for mocking behavior!
 
+Supported Python Versions: 3.10+
+
 # Why Use MegaMock?
 MegaMock was created to address some shortcomings in the built-in Python library:
 - Legacy code holds back "best practice" defaults, so many developers write sub-optimal mocks
