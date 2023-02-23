@@ -36,7 +36,7 @@ class TestMegaMock:
             with pytest.raises(AttributeError):
                 mock_class.a
 
-        def test_annotated_attributes_are_allowed_if_spec_set_is_true(self) -> None:
+        def test_delimited_attributes_are_allowed_if_spec_set_is_true(self) -> None:
             mock_instance: SomeClass = MegaMock(SomeClass, spec_set=True)
 
             mock_instance.a = "some str"
