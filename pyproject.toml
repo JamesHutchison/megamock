@@ -1,9 +1,23 @@
 [tool.poetry]
 name = "megamock"
-version = "0.1.0a"
+version = "0.1.0-alpha.2"
 description = "Mega mocking capabilities"
-authors = ["James Hutchison <@JamesHutchison>"]
+authors = ["James Hutchison <jamesghutchison@proton.me>"]
 readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/JamesHutchison/megamock"
+repository = "https://github.com/JamesHutchison/megamock"
+keywords = ["mock", "test"]
+include = [
+    "LICENSE"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Testing :: Mocking",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.10 <4.0"
