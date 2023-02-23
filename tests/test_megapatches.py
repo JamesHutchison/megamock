@@ -3,6 +3,7 @@ from megamock import MegaPatch
 from megamock.megapatches import MegaMock
 from tests.simple_app.bar import some_func
 from tests.simple_app.foo import Foo, bar, foo_instance
+from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
 from tests.simple_app.nested_classes import NestedParent
@@ -88,6 +89,13 @@ class TestMegaPatchPatching:
 
         assert get_nested_class_attribute_value() == "z"
 
+    # Issue https://github.com/JamesHutchison/megamock/issues/13
+    @pytest.mark.xfail
+    def test_patch_renamed_var(self) -> None:
+        MegaPatch.it(OtherFoo.some_method, return_value="sm")
+
+        assert Foo("s").some_method() == "sm"
+
 
 class TestMegaPatchAutoStart:
     def test_enabled_by_default(self) -> None:
@@ -138,6 +146,8 @@ class TestMegaPatchReturnValue:
 
 
 class TestMegaPatchObject:
+
+    # Issue https://github.com/JamesHutchison/megamock/issues/8
     @pytest.mark.xfail
     def test_patching_local_object(self) -> None:
         my_obj = Foo("s")
