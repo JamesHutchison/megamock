@@ -65,7 +65,7 @@ def test_something(...):
 
 ### Installation
 
-TBD
+`pip install megamock`
 
 ### Usage
 
