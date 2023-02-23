@@ -7,7 +7,7 @@ readme = "README.md"
 license = "MIT"
 homepage = "https://github.com/JamesHutchison/megamock"
 repository = "https://github.com/JamesHutchison/megamock"
-keywords = ["mock", "mega", "test"]
+keywords = ["mock", "test"]
 include = [
     "LICENSE"
 ]
