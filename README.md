@@ -1,6 +1,6 @@
 # MegaMock
 
-Pew pew! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-annotated paths!
+Pew pew! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-delimited paths!
 Also sane defaults for mocking behavior!
 
 Supported Python Versions: 3.10+
