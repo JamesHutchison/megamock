@@ -58,7 +58,7 @@ class _MegaMockMixin:
                     val = self._mock_return_value_cache = self._mock_return_value_
             return val
         return self.__dict__.get(
-            "_mock_return_value", self.__class__._mock_return_value  # type: ignore
+            "_mock_return_value", self.__class__._mock_return_value
         )
 
     def _get_child_mock(self, /, **kw) -> MegaMock:
