@@ -5,7 +5,7 @@ import pytest
 from megamock import MegaMock
 from megamock.megamocks import NonCallableMegaMock
 from tests.conftest import SomeClass
-from tests.simple_app import Bar
+from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
 
 

@@ -4,4 +4,4 @@ def some_func(val: str) -> str:
 
 class Bar:
     def __call__(self) -> str:
-        return "s"
+        return "called"
