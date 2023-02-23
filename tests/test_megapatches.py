@@ -1,7 +1,7 @@
 import pytest
 from megamock import MegaPatch
 from megamock.megapatches import MegaMock
-from tests.simple_app.bar import some_func
+from tests.simple_app.bar import some_func, Bar
 from tests.simple_app.foo import Foo, bar, foo_instance
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
@@ -135,6 +135,19 @@ class TestMegaPatchReturnValue:
         patch = MegaPatch.it(some_func, return_value=ret_val)
 
         assert patch.return_value is ret_val
+
+    def test_patch_return_value_is_not_assignable(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        with pytest.raises(AttributeError):
+            patch.return_value = 5  # type: ignore
+
+    def test_return_value_has_changable_return_value(self) -> None:
+        patch = MegaPatch.it(Bar)
+
+        patch.return_value.return_value = "something"
+
+        assert Bar()() == "something"
 
 
 class TestMegaPatchObject:
