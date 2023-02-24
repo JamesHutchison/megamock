@@ -146,7 +146,7 @@ Patching a class attribute:
 from my_module import MyClass
 
 # temporarily update the hard coded default max retries to 0
-mock_class = MegaPatch(MyClass.max_retries, new=0)
+mega_patch = MegaPatch(MyClass.max_retries, new=0)
 ```
 
 Patching a class method:
