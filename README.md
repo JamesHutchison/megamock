@@ -132,6 +132,23 @@ from my_module import MyClass
 mock_class = MegaMock(MyClass, instance=False)
 ```
 
+Patching a class:
+
+```python
+from my_module import MyClass
+
+mock_class = MegaPatch(MyClass)
+```
+
+Patching a class attribute:
+
+```python
+from my_module import MyClass
+
+# temporarily update the hard coded default max retries to 0
+mock_class = MegaPatch(MyClass.max_retries, new=0)
+```
+
 Patching a class method:
 
 ```python
@@ -170,7 +187,7 @@ mega_patch.new_value.x is MyClass.x
 `mega_patch.return_value` is the class _instance_ returned
 
 ```python
-megaa_patch = MegaPatch.it(MyClass)
+mega_patch = MegaPatch.it(MyClass)
 
 mega_patch.return_value is MyClass()
 ```
