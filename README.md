@@ -137,7 +137,16 @@ Patching a class:
 ```python
 from my_module import MyClass
 
-mock_class = MegaPatch(MyClass)
+mock_patch = MegaPatch(MyClass)
+
+# the class itself
+mock_patch.new_value
+
+# the class instance
+mock_patch.return_value
+
+# the return value of the __call__ method on the class
+mock_patch.return_value.return_value
 ```
 
 Patching a class attribute:
