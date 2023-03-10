@@ -68,14 +68,22 @@ def test_something(...):
 Import and execution order is important for MegaMock. When running tests, you will need to execute the `start_import_mod`
 function prior to importing any production or test code. You will also want it so the loader is not used in production.
 
-With `pytest`, this is easily done by adding a root level `conftest.py` file if it does not exist already, and executing
-the function there.
+With `pytest`, this is easily done by using the included pytest plugin. You can use it by adding `-p megamock.plugins.pytest`
+to the command line.
 
-```python
-import megamock
-
-megamock.start_import_mod()
+Command line example:
 ```
+pytest -p megamock.plugins.pytest
+```
+
+`pyproject.toml` example:
+```toml
+[tool.pytest.ini_options]
+addopts = "-p megamock.plugins.pytest"
+```
+
+The pytest plugin also automatically stops `MegaPatch`es after each test. To disable this behavior, pass in the `--do_not_autostop_megapatches`
+command line argument.
 
 In tests, the `MegaMock` class replaces the mock classes `MagicMock` and `Mock`. `MegaPatch.it(...)` replaces `patch(...)`.
 Currently, there is no substitute for `patch.object` although `MegaPatch.it` should work on global instances (singletons).

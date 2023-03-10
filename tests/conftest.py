@@ -15,8 +15,3 @@ class SomeClass:
         return "b"
 
     c = 1
-
-
-@pytest.fixture(autouse=True)
-def stop_all_patches() -> None:
-    MegaPatch.stop_all()
