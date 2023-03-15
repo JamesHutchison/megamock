@@ -1,10 +1,3 @@
-import pytest
-
-from megamock import start_import_mod, MegaPatch
-
-start_import_mod()
-
-
 class SomeClass:
     a: str | None
 
