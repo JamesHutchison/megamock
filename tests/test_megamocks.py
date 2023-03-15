@@ -144,7 +144,6 @@ class TestMegaMock:
 
             assert "foo" in mega_mock.megamock_attr_assignments
             stacktrace = mega_mock.megamock_attr_assignments["foo"][0].stacktrace
-            # assert stacktrace[0].filename.endswith("test_megamocks.py")
             assert len(stacktrace) > 5
             for frame in stacktrace:
                 assert "/megamocks.py" not in frame.filename
