@@ -146,7 +146,7 @@ class MegaPatch:
         )
 
         if isinstance(thing, _MegaMockMixin):
-            thing = thing._megamock_spec
+            thing = thing.megamock_spec
         if isinstance(thing, cached_property):
             thing = thing.func
 
