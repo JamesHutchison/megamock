@@ -160,3 +160,17 @@ class TestMegaMock:
 
             assert mega_mock.megamock_attr_assignments["foo"][0].attr_value == "foo"
             assert mega_mock.megamock_attr_assignments["foo"][1].attr_value == "second"
+
+    class TestWraps:
+        def test_wraps_object(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock(wraps=obj)
+
+            assert mega_mock.some_method() == "value"
+            assert len(mega_mock.some_method.call_args_list) == 1
+
+        def test_wraps_has_same_warts_as_magicmock(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock(wraps=obj)
+
+            assert isinstance(mega_mock.s, MegaMock)

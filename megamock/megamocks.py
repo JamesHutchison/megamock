@@ -38,14 +38,19 @@ class _MegaMockMixin:
             | mock.NonCallableMagicMock
             | None
         ) = None,
+        wraps: Any = None,
         spec_set=True,
         instance=True,
+        # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
     ) -> None:
+        self.wraps = wraps
         self.megamock_spec = spec
         self.megamock_attr_assignments: defaultdict[
             str, list[AttributeAssignment]
         ] = defaultdict(list)
+        if wraps and not _wraps_mock:
+            _wraps_mock = mock.MagicMock(wraps=wraps)
 
         # !important!
         # once __wrapped is set, future assignments will be on the wrapped object
@@ -59,7 +64,12 @@ class _MegaMockMixin:
             else:
                 super().__init__(**kwargs)
         else:
-            self._mock_return_value_ = _wraps_mock.return_value
+            # there is a bug where simply checking for "return_value"
+            # on a MagicMock will set it, breaking the wrapped value
+            if not wraps:
+                self._mock_return_value_ = _wraps_mock.return_value
+            else:
+                self._mock_return_value_ = None
             self.__wrapped = _wraps_mock
 
     @property
@@ -73,7 +83,7 @@ class _MegaMockMixin:
                     mock.NonCallableMagicMock | mock.NonCallableMock,
                 ):
                     val = self._mock_return_value_cache = MegaMock.from_legacy_mock(
-                        self._mock_return_value_, None
+                        self._mock_return_value_, None, self.wraps
                     )
                 else:
                     val = self._mock_return_value_cache = self._mock_return_value_
@@ -92,7 +102,7 @@ class _MegaMockMixin:
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
             ):
                 mega_result = MegaMock.from_legacy_mock(
-                    result, getattr(self.megamock_spec, key, None)
+                    result, getattr(self.megamock_spec, key, None), self.wraps
                 )
                 setattr(wrapped, key, mega_result)
                 return mega_result
@@ -140,10 +150,11 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
             | mock.NonCallableMagicMock
         ),
         spec: Any,
+        wraps: Any = None,
     ) -> NonCallableMegaMock | MegaMock:
         if not isinstance(mock_obj, (mock.MagicMock, mock.Mock)):
-            return NonCallableMegaMock(_wraps_mock=mock_obj, spec=spec)
-        return MegaMock(_wraps_mock=mock_obj, spec=spec)
+            return NonCallableMegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
+        return MegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
 
     def __call__(self, *args, **kwargs) -> Any:
         if self.__dict__.get("_MegaMockMixin__wrapped"):
