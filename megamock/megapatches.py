@@ -48,14 +48,12 @@ class MegaPatch:
     def __init__(
         self,
         thing: Any,
-        path: str,
         patches: list[mock._patch],
         new_value: MegaMock | Any,
         return_value: Any,
     ) -> None:
         self._patches = patches
         self._thing = thing
-        self._path = path
         self._new_value: MegaMock = new_value
         self._return_value = return_value
 
@@ -66,10 +64,6 @@ class MegaPatch:
     @property
     def thing(self) -> Any:
         return self._thing
-
-    @property
-    def path(self) -> str:
-        return self._path
 
     @property
     def new_value(self) -> MegaMock | Any:
@@ -147,8 +141,38 @@ class MegaPatch:
             behavior = MegaPatchBehavior.for_thing(thing)
         if (autospec := kwargs.pop("autospec", None)) in (True, False):
             behavior.autospec = autospec
+        new, return_value = MegaPatch._new_return_value(
+            thing, spec_set, new, kwargs, behavior
+        )
+
+        if isinstance(thing, _MegaMockMixin):
+            thing = thing._megamock_spec
+        if isinstance(thing, cached_property):
+            thing = thing.func
+
+        passed_in_name = argname("thing", vars_only=False)
+
+        module_path = MegaPatch._determine_module_path(thing, passed_in_name)
+
+        patches = MegaPatch._build_patches(
+            mocker, module_path, passed_in_name, new, kwargs
+        )
+
+        mega_patch = MegaPatch(thing, patches, new, return_value)
+        if autostart:
+            mega_patch.start()
+        return mega_patch
+
+    @staticmethod
+    def _new_return_value(
+        thing: Any,
+        spec_set: bool,
+        new_given: Any,
+        kwargs: dict,
+        behavior: MegaPatchBehavior,
+    ) -> tuple[Any, Any]:
         provided_return_value = kwargs.pop("return_value", _MISSING)
-        if new is None:
+        if new_given is None:
             if behavior.autospec:
                 new, return_value = MegaPatch._get_new_and_return_value_with_autospec(
                     behavior, thing, spec_set, provided_return_value
@@ -160,6 +184,7 @@ class MegaPatch:
                     return_value = provided_return_value
                 new = MegaMock(return_value=return_value)
         else:
+            new = new_given
             if hasattr(new, "return_value"):
                 logger.warning("Ignoring return_value argument when 'new' is provided")
                 return_value = new.return_value
@@ -168,20 +193,25 @@ class MegaPatch:
 
         assert return_value is not _MISSING
 
-        if isinstance(thing, _MegaMockMixin):
-            thing = thing._megamock_spec
-        if isinstance(thing, cached_property):
-            thing = thing.func
+        return new, return_value
 
-        passed_in_name = argname("thing", vars_only=False)
-
+    @staticmethod
+    def _determine_module_path(thing: Any, passed_in_name: str) -> str:
         if not (module_path := getattr(thing, "__module__", None)):
             owning_class = MegaPatch._get_owning_class(passed_in_name)
             if owning_class:
                 module_path = owning_class.__module__
         if module_path is None:
-            module_path = MegaPatch.get_module_path_for_nonclass(passed_in_name)
+            module_path = MegaPatch._get_module_path_for_nonclass()
 
+        if module_path is None:
+            raise Exception(f"Unable to determine module path for: {thing!r}")
+        return module_path
+
+    @staticmethod
+    def _build_patches(
+        mocker: Any, module_path: str, passed_in_name: str, new: Any, kwargs: dict
+    ) -> list[mock._patch]:  # type: ignore  # mypy bug?
         patches = []
         for path in (
             References.get_references(module_path, passed_in_name)
@@ -192,15 +222,12 @@ class MegaPatch:
             p = mocker.patch(mock_path, new, **kwargs)
             patches.append(p)
 
-        mega_patch = MegaPatch(thing, mock_path, patches, new, return_value)
-        if autostart:
-            mega_patch.start()
-        return mega_patch
+        return patches
 
     @staticmethod
-    def get_module_path_for_nonclass(passed_in_name: str) -> str:
+    def _get_module_path_for_nonclass() -> str:
         stack = inspect.stack()
-        module = inspect.getmodule(stack[2][0])
+        module = inspect.getmodule(stack[3][0])
         assert module
         return module.__name__
 
