@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "megamock"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 description = "Mega mocking capabilities"
 authors = ["James Hutchison <jamesghutchison@proton.me>"]
 readme = "README.md"
@@ -8,9 +8,7 @@ license = "MIT"
 homepage = "https://github.com/JamesHutchison/megamock"
 repository = "https://github.com/JamesHutchison/megamock"
 keywords = ["mock", "test"]
-include = [
-    "LICENSE"
-]
+include = ["LICENSE"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Operating System :: OS Independent",
@@ -21,7 +19,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10 <4.0"
-varname = {extras = ["asttokens"], version = "^0.10.0"}
+varname = { extras = ["asttokens"], version = "^0.10.0" }
 asttokens = "^2.2.1"
 
 [tool.poetry.group.dev.dependencies]
@@ -33,3 +31,6 @@ pytest = "^7.2.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = "-p megamock.plugins.pytest"

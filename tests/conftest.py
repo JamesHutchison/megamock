@@ -1,10 +1,3 @@
-import pytest
-
-from megamock import start_import_mod, MegaPatch
-
-start_import_mod()
-
-
 class SomeClass:
     a: str | None
 
@@ -15,8 +8,3 @@ class SomeClass:
         return "b"
 
     c = 1
-
-
-@pytest.fixture(autouse=True)
-def stop_all_patches() -> None:
-    MegaPatch.stop_all()
