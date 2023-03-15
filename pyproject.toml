@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "megamock"
 version = "0.1.0-alpha.3"
-description = "Mega mocking capabilities"
+description = "Mega mocking capabilities - stop using dot-notated paths!"
 authors = ["James Hutchison <jamesghutchison@proton.me>"]
 readme = "README.md"
 license = "MIT"
