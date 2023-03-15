@@ -87,7 +87,7 @@ class TestMegaMock:
             legacy_mock = mock.create_autospec(SomeClass)
             mega_mock: MegaMock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock._megamock_spec is SomeClass
+            assert mega_mock.megamock_spec is SomeClass
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -103,7 +103,7 @@ class TestMegaMock:
 
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock._megamock_spec is SomeClass
+            assert mega_mock.megamock_spec is SomeClass
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -116,7 +116,7 @@ class TestMegaMock:
 
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock._megamock_spec is SomeClass
+            assert mega_mock.megamock_spec is SomeClass
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -135,3 +135,28 @@ class TestMegaMock:
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec="a")
 
             assert isinstance(mega_mock, NonCallableMegaMock)
+
+    class TestMegaMockAttributeAssignment:
+        def test_grabs_expected_stacktrace(self) -> None:
+            mega_mock = MegaMock()
+
+            mega_mock.foo = "bar"
+
+            assert "foo" in mega_mock.megamock_attr_assignments
+            stacktrace = mega_mock.megamock_attr_assignments["foo"][0].stacktrace
+            assert len(stacktrace) > 5
+            for frame in stacktrace:
+                assert "/megamocks.py" not in frame.filename
+
+        def test_multiple_assignments(self) -> None:
+            mega_mock = MegaMock()
+            mega_mock.foo = "foo"
+            mega_mock.bar = "bar"
+
+            mega_mock.foo = "second"
+
+            assert len(mega_mock.megamock_attr_assignments["foo"]) == 2
+            assert len(mega_mock.megamock_attr_assignments["bar"]) == 1
+
+            assert mega_mock.megamock_attr_assignments["foo"][0].attr_value == "foo"
+            assert mega_mock.megamock_attr_assignments["foo"][1].attr_value == "second"
