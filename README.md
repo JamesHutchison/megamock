@@ -140,6 +140,32 @@ from my_module import MyClass
 mock_class = MegaMock(MyClass, instance=False)
 ```
 
+Spying an object, then checking about it:
+
+```python
+from my_module import MyClass
+
+my_thing = MyClass()
+spied_class = MegaMock(spy=my_thing)
+
+# ... do stuff with spied_class...
+
+spied_class.some_method.call_args_list  # same as wraps
+
+# check whether a value was accessed
+# if things aren't as expected, you can pull up the debugger and see the stack traces
+assert len(spied_class.megamock_spied_access["some_attribute"]) == 1
+
+spy_access_list = spied_class.megamock_spied_access["some_attribute"]
+spy_access: SpyAccess = spy_access_list[0]
+spy_access.attr_value  # shallow copy of what was returned
+spy_access.stacktrace  # where the access happened
+spy_access.time  # when it happened (from time.time())
+spy_access.format_stacktrace()  # return a list of strings for the stacktrace
+spy_access.print_stacktrace()  # display the stacktrace to the console
+```
+
+
 Patching a class:
 
 ```python
