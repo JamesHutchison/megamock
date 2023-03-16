@@ -3,10 +3,26 @@ from unittest import mock
 import pytest
 
 from megamock import MegaMock
-from megamock.megamocks import NonCallableMegaMock
+from megamock.megamocks import AttributeTrackingBase, NonCallableMegaMock
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
+
+
+class TestAttributeTrackingBase:
+    class Sample(AttributeTrackingBase):
+        def __init__(self) -> None:
+            import traceback
+
+            self.stacktrace = traceback.extract_stack()[::-1]
+
+    def test_top_of_stacktrace_breaks_up_lines(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+        assert len(obj.top_of_stacktrace) == 10
+
+    def test_top_of_stacktrace_shortens_path(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+        assert obj.top_of_stacktrace[0].startswith("...")
 
 
 class TestMegaMock:

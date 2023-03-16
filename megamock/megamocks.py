@@ -1,6 +1,8 @@
 from __future__ import annotations
+from abc import ABCMeta
 from collections import defaultdict
 import copy
+import re
 import time
 import traceback
 from typing import Any
@@ -13,8 +15,25 @@ class _MISSING:
     """
 
 
-class AttributeTrackingBase:
+class AttributeTrackingBase(metaclass=ABCMeta):
     stacktrace: list[traceback.FrameSummary]
+
+    @property
+    def top_of_stacktrace(self) -> list[str]:
+        """
+        Convenience property for quickly viewing the stacktrace in an IDE debugger
+        """
+        ret = []
+        for x in self.format_stacktrace(5):
+            if rslt := re.search(
+                r"[^/\\]+[/\\][\w\.]+\", line \d+,.*", x, re.MULTILINE | re.DOTALL
+            ):
+                lines = rslt.group(0).splitlines()
+                lines[0] = "..." + lines[0]
+                ret.extend([line for line in lines if line])
+            else:
+                ret.append(x)
+        return ret
 
     def format_stacktrace(self, max_depth=100) -> list[str]:
         # for lists, the first frame is the most recent
