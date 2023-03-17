@@ -1,9 +1,11 @@
+import asyncio
+import inspect
 from unittest import mock
 
 import pytest
 
 from megamock import MegaMock
-from megamock.megamocks import AttributeTrackingBase, NonCallableMegaMock
+from megamock.megamocks import AsyncMegaMock, AttributeTrackingBase, NonCallableMegaMock
 from megamock.megapatches import MegaPatch
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
@@ -41,6 +43,11 @@ class TestMegaMock:
 
     def test_return_value_when_no_args(self) -> None:
         assert isinstance(MegaMock()(), MegaMock)
+
+    def test_side_effect_value(self) -> None:
+        mega_mock = MegaMock(side_effect=lambda: 5)
+
+        assert mega_mock() == 5
 
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:
@@ -236,3 +243,27 @@ class TestMegaMock:
                 .stacktrace[0]
                 .filename.endswith("test_megamocks.py")
             )
+
+    class TestAsyncMock:
+        def test_async_mock_basics(self) -> None:
+            mega_mock = AsyncMegaMock()
+            assert asyncio.iscoroutinefunction(mega_mock) is True
+            assert inspect.isawaitable(mega_mock()) is True
+
+        async def test_function_side_effect(self) -> None:
+            mega_mock = AsyncMegaMock(side_effect=lambda: 5)
+
+            result = await mega_mock()
+            assert result == 5
+
+        def test_exception_side_effect(self) -> None:
+            pass
+
+        def test_iterable_side_effect(self) -> None:
+            pass
+
+        def test_return_value_provided(self) -> None:
+            pass
+
+        def test_defaults_to_async_mega_mock_return(self) -> None:
+            pass

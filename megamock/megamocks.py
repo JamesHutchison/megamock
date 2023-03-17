@@ -161,6 +161,9 @@ class _MegaMockMixin:
     def _get_child_mock(self, /, **kw) -> MegaMock:
         return MegaMock(**kw)
 
+    def __getattribute__(self, name: str) -> Any:
+        return super().__getattribute__(name)
+
     def __getattr__(self, key) -> Any:
         if key not in ("megamock_spy", "megamock_spied_access") and self.megamock_spy:
             result = getattr(self.megamock_spy, key)
@@ -208,6 +211,8 @@ class _MegaMockMixin:
                     wrapped.__dict__[key] = value
                 else:
                     raise
+        elif key in ("side_effect",):
+            super().__setattr__(key, value)
         else:
             self.__dict__[key] = value
 
@@ -230,6 +235,8 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
         wraps: Any = None,
     ) -> NonCallableMegaMock | MegaMock:
         if not isinstance(mock_obj, (mock.MagicMock, mock.Mock)):
+            if isinstance(mock_obj, mock.AsyncMock):
+                return AsyncMegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
             return NonCallableMegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
         return MegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
 
@@ -240,4 +247,8 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
 
 
 class NonCallableMegaMock(_MegaMockMixin, mock.NonCallableMagicMock):
+    pass
+
+
+class AsyncMegaMock(_MegaMockMixin, mock.AsyncMock):
     pass
