@@ -19,14 +19,15 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10 <4.0"
-varname = { extras = ["asttokens"], version = "^0.10.0" }
-asttokens = "^2.2.1"
+varname = { extras = ["asttokens"], version = "~0.10.0" }
+asttokens = "~2.2.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
 mypy = "^0.991"
 flake8 = "^6.0.0"
 pytest = "^7.2.1"
+pytest-asyncio = "^0.20.3"
 
 [build-system]
 requires = ["poetry-core"]
@@ -34,3 +35,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 addopts = "-p megamock.plugins.pytest"
+asyncio_mode = "auto"
