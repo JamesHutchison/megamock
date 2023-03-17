@@ -49,6 +49,35 @@ class TestMegaMock:
 
         assert mega_mock() == 5
 
+    def test_function_spec_with_return_value(self) -> None:
+        def some_func(val: str) -> str:
+            return val
+
+        mega_mock = MegaMock(some_func, return_value="foo")
+        assert mega_mock("input val") == "foo"
+
+        with pytest.raises(TypeError):
+            mega_mock()
+
+    def test_call_args_update(self) -> None:
+        mega_mock = MegaMock()
+        mega_mock()
+
+        assert mega_mock.call_count == 1
+        assert mega_mock.call_args_list == [mock.call()]
+
+    def test_not_awaitable(self) -> None:
+        assert asyncio.iscoroutinefunction(MegaMock()) is False
+        assert inspect.isawaitable(MegaMock()) is False
+
+    async def test_when_async_function_is_spec_then_awaitable(self) -> None:
+        async def some_func() -> str:
+            return "s"
+
+        mega_mock = MegaMock(some_func)
+        assert asyncio.iscoroutinefunction(mega_mock) is True
+        assert inspect.isawaitable(mega_mock()) is True
+
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:
             mock_instance: SomeClass = MegaMock(SomeClass)
@@ -245,16 +274,20 @@ class TestMegaMock:
             )
 
     class TestAsyncMock:
-        def test_async_mock_basics(self) -> None:
+        async def test_async_mock_basics(self) -> None:
             mega_mock = AsyncMegaMock()
             assert asyncio.iscoroutinefunction(mega_mock) is True
             assert inspect.isawaitable(mega_mock()) is True
+
+            await mega_mock()
+            assert mega_mock.await_count == 1
 
         async def test_function_side_effect(self) -> None:
             mega_mock = AsyncMegaMock(side_effect=lambda: 5)
 
             result = await mega_mock()
             assert result == 5
+            assert mega_mock.call_count == 1
 
         async def test_exception_side_effect(self) -> None:
             mega_mock = AsyncMegaMock(side_effect=Exception("whoops!"))
@@ -289,3 +322,13 @@ class TestMegaMock:
 
             result = await mega_mock()
             assert await result() == 5
+
+        async def test_async_spec(self) -> None:
+            async def some_func(val: str) -> str:
+                return val
+
+            mega_mock = AsyncMegaMock(some_func, return_value="actual return")
+            assert await mega_mock("input val") == "actual return"
+
+            with pytest.raises(TypeError):
+                await mega_mock()

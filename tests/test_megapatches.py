@@ -1,6 +1,7 @@
 import pytest
 from megamock import MegaPatch
 from megamock.megapatches import MegaMock
+from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
 from tests.simple_app.bar import some_func, Bar
 from tests.simple_app.foo import Foo, bar, foo_instance
 from tests.simple_app.foo import Foo as OtherFoo
@@ -174,3 +175,15 @@ class TestMegaPatchObject:
 
         assert Foo("s").moo == "cow"
         assert foo_instance.moo == "moooo"
+
+
+class TestAsyncPatching:
+    async def test_patching_async_function(self) -> None:
+        MegaPatch.it(an_async_function, return_value="val")
+
+        assert await an_async_function("s") == "val"
+
+    async def test_patching_async_method(self) -> None:
+        MegaPatch.it(SomeClassWithAsyncMethods.some_method, return_value="val")
+
+        assert await (SomeClassWithAsyncMethods().some_method("s")) == "val"
