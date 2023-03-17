@@ -103,7 +103,6 @@ class _MegaMockMixin:
         self.megamock_spied_access: defaultdict[str, list[SpyAccess]] = defaultdict(
             list
         )
-        # self.megamock_spy = spy
         if wraps and spy:
             # if spy is used, then the spied value is also wrapped
             raise Exception("Cannot both wrap and spy")
@@ -251,4 +250,5 @@ class NonCallableMegaMock(_MegaMockMixin, mock.NonCallableMagicMock):
 
 
 class AsyncMegaMock(_MegaMockMixin, mock.AsyncMock):
-    pass
+    def _get_child_mock(self, /, **kw) -> AsyncMegaMock:
+        return AsyncMegaMock(**kw)

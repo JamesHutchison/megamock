@@ -256,14 +256,36 @@ class TestMegaMock:
             result = await mega_mock()
             assert result == 5
 
-        def test_exception_side_effect(self) -> None:
-            pass
+        async def test_exception_side_effect(self) -> None:
+            mega_mock = AsyncMegaMock(side_effect=Exception("whoops!"))
 
-        def test_iterable_side_effect(self) -> None:
-            pass
+            with pytest.raises(Exception) as exc:
+                await mega_mock()
 
-        def test_return_value_provided(self) -> None:
-            pass
+            assert str(exc.value) == "whoops!"
 
-        def test_defaults_to_async_mega_mock_return(self) -> None:
-            pass
+        async def test_iterable_side_effect(self) -> None:
+            mega_mock = AsyncMegaMock(side_effect=[1, 2, 3])
+
+            first = await mega_mock()
+            second = await mega_mock()
+            third = await mega_mock()
+
+            assert [first, second, third] == [1, 2, 3]
+
+        async def test_return_value_provided(self) -> None:
+            mega_mock = AsyncMegaMock(return_value=25)
+
+            assert await mega_mock() == 25
+
+        async def test_defaults_to_async_mega_mock_return(self) -> None:
+            assert isinstance(AsyncMegaMock(), AsyncMegaMock)
+
+            await AsyncMegaMock()()
+
+        async def test_altering_return_value(self) -> None:
+            mega_mock = AsyncMegaMock()
+            mega_mock.return_value.return_value = 5
+
+            result = await mega_mock()
+            assert await result() == 5
