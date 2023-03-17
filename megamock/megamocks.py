@@ -21,7 +21,9 @@ class AttributeTrackingBase(metaclass=ABCMeta):
     @property
     def top_of_stacktrace(self) -> list[str]:
         """
-        Convenience property for quickly viewing the stacktrace in an IDE debugger
+        Convenience property for quickly viewing the stacktrace in an IDE debugger.
+
+        This displays the folder / file and then the rest of the stacktrace
         """
         ret = []
         for x in self.format_stacktrace(5):
