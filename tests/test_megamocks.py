@@ -3,10 +3,36 @@ from unittest import mock
 import pytest
 
 from megamock import MegaMock
-from megamock.megamocks import NonCallableMegaMock
+from megamock.megamocks import AttributeTrackingBase, NonCallableMegaMock
+from megamock.megapatches import MegaPatch
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
+
+
+class TestAttributeTrackingBase:
+    class Sample(AttributeTrackingBase):
+        def __init__(self) -> None:
+            import traceback
+
+            self.stacktrace = traceback.extract_stack()[::-1]
+
+    def test_top_of_stacktrace_breaks_up_lines(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+        assert len(obj.top_of_stacktrace) == 10
+
+    def test_top_of_stacktrace_shortens_path(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+        assert obj.top_of_stacktrace[0].startswith("...")
+
+    def test_top_of_stacktrace_root_folder(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+
+        MegaPatch.it(
+            AttributeTrackingBase.format_stacktrace,
+            return_value=['"file_in_root.py", line 1,  something something'],
+        )
+        assert obj.top_of_stacktrace[0].startswith('"file_in_root.py')
 
 
 class TestMegaMock:
@@ -174,3 +200,39 @@ class TestMegaMock:
             mega_mock = MegaMock(wraps=obj)
 
             assert isinstance(mega_mock.s, MegaMock)
+
+    class TestSpy:
+        def test_equivalent_to_wraps_for_methods(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock(spy=obj)
+
+            assert mega_mock.some_method() == "value"
+            assert len(mega_mock.some_method.call_args_list) == 1
+
+        def test_supports_properties(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock(spy=obj)
+
+            mega_mock._s = "str"
+            assert mega_mock.s == "str"
+
+        def test_supports_attributes(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock(spy=obj)
+
+            assert mega_mock._s == "s"
+
+        def test_spies_on_attribute_access(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock(spy=obj)
+
+            mega_mock.z
+            mega_mock.moo
+            mega_mock.helpful_manager
+
+            assert len(mega_mock.megamock_spied_access) == 3
+            assert (
+                mega_mock.megamock_spied_access["z"][0]
+                .stacktrace[0]
+                .filename.endswith("test_megamocks.py")
+            )

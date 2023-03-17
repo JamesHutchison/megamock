@@ -1,5 +1,8 @@
 from __future__ import annotations
+from abc import ABCMeta
 from collections import defaultdict
+import copy
+import re
 import time
 import traceback
 from typing import Any
@@ -12,8 +15,41 @@ class _MISSING:
     """
 
 
-class AttributeAssignment:
-    def __init__(self, attr_name: str, attr_value: Any, stacktrace) -> None:
+class AttributeTrackingBase(metaclass=ABCMeta):
+    stacktrace: list[traceback.FrameSummary]
+
+    @property
+    def top_of_stacktrace(self) -> list[str]:
+        """
+        Convenience property for quickly viewing the stacktrace in an IDE debugger.
+
+        This displays the folder / file and then the rest of the stacktrace
+        """
+        ret = []
+        for x in self.format_stacktrace(5):
+            if rslt := re.search(
+                r"[^/\\]+[/\\][\w\.]+\", line \d+,.*", x, re.MULTILINE | re.DOTALL
+            ):
+                lines = rslt.group(0).splitlines()
+                lines[0] = "..." + lines[0]
+                ret.extend([line for line in lines if line])
+            else:
+                ret.append(x)
+        return ret
+
+    def format_stacktrace(self, max_depth=100) -> list[str]:
+        # for lists, the first frame is the most recent
+        return traceback.format_list(self.stacktrace[:max_depth])
+
+    def print_stacktrace(self, max_depth=100) -> None:
+        # when printing stacktraces, display the most recent frame last
+        traceback.print_list(self.stacktrace[:-max_depth:-1])
+
+
+class AttributeAssignment(AttributeTrackingBase):
+    def __init__(
+        self, attr_name: str, attr_value: Any, stacktrace: list[traceback.FrameSummary]
+    ) -> None:
         self.attr_name = attr_name
         self.attr_value = attr_value
         self.stacktrace = stacktrace  # 0 is most recent frame, not oldest frame
@@ -25,6 +61,25 @@ class AttributeAssignment:
     ) -> AttributeAssignment:
         stacktrace = traceback.extract_stack()[-starting_depth::-1]
         return AttributeAssignment(attr_name, attr_value, stacktrace)
+
+
+class SpyAccess(AttributeTrackingBase):
+    def __init__(
+        self, attr_name: str, attr_value: Any, stacktrace: list[traceback.FrameSummary]
+    ) -> None:
+        self.attr_name = attr_name
+        self.attr_value = copy.copy(
+            attr_value  # just doing shallow copy, may need to revisit in future
+        )
+        self.stacktrace = stacktrace  # 0 is most recent frame, not oldest frame
+        self.time = time.time()
+
+    @staticmethod
+    def for_current_stack(
+        attr_name: str, attr_value: Any, starting_depth=3
+    ) -> SpyAccess:
+        stacktrace = traceback.extract_stack()[-starting_depth::-1]
+        return SpyAccess(attr_name, attr_value, stacktrace)
 
 
 class _MegaMockMixin:
@@ -39,12 +94,21 @@ class _MegaMockMixin:
             | None
         ) = None,
         wraps: Any = None,
+        spy: Any = None,
         spec_set=True,
         instance=True,
         # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
     ) -> None:
-        self.wraps = wraps
+        self.megamock_spied_access: defaultdict[str, list[SpyAccess]] = defaultdict(
+            list
+        )
+        # self.megamock_spy = spy
+        if wraps and spy:
+            # if spy is used, then the spied value is also wrapped
+            raise Exception("Cannot both wrap and spy")
+
+        self.megamock_wraps = wraps = wraps or spy
         self.megamock_spec = spec
         self.megamock_attr_assignments: defaultdict[
             str, list[AttributeAssignment]
@@ -52,8 +116,10 @@ class _MegaMockMixin:
         if wraps and not _wraps_mock:
             _wraps_mock = mock.MagicMock(wraps=wraps)
 
+        self.megamock_spy = spy
         # !important!
         # once __wrapped is set, future assignments will be on the wrapped object
+        # __wrapped becomes "_MegaMockMixin__wrapped"
         # it MUST be last
         if _wraps_mock is None:
             if spec is not None:
@@ -83,7 +149,7 @@ class _MegaMockMixin:
                     mock.NonCallableMagicMock | mock.NonCallableMock,
                 ):
                     val = self._mock_return_value_cache = MegaMock.from_legacy_mock(
-                        self._mock_return_value_, None, self.wraps
+                        self._mock_return_value_, None, self.megamock_wraps
                     )
                 else:
                     val = self._mock_return_value_cache = self._mock_return_value_
@@ -96,13 +162,22 @@ class _MegaMockMixin:
         return MegaMock(**kw)
 
     def __getattr__(self, key) -> Any:
+        if key not in ("megamock_spy", "megamock_spied_access") and self.megamock_spy:
+            result = getattr(self.megamock_spy, key)
+            # if result is callable let wrapped handle it so that it's a mock object
+            if not callable(result):
+                self.megamock_spied_access[key].append(
+                    SpyAccess.for_current_stack(key, result)
+                )
+                return result
+
         if (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")) is not None:
             result = getattr(wrapped, key)
             if not isinstance(result, _MegaMockMixin) and isinstance(
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
             ):
                 mega_result = MegaMock.from_legacy_mock(
-                    result, getattr(self.megamock_spec, key, None), self.wraps
+                    result, getattr(self.megamock_spec, key, None), self.megamock_wraps
                 )
                 setattr(wrapped, key, mega_result)
                 return mega_result
@@ -110,7 +185,9 @@ class _MegaMockMixin:
         raise AttributeError(key)
 
     def __setattr__(self, key, value) -> None:
-        if (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")) is not None:
+        if key != "_MegaMockMixin__wrapped" and self.__dict__.get("megamock_spy"):
+            setattr(self.megamock_spy, key, value)
+        elif (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")) is not None:
             try:
                 setattr(wrapped, key, value)
             except AttributeError:
