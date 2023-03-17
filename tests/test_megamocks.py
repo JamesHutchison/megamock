@@ -4,6 +4,7 @@ import pytest
 
 from megamock import MegaMock
 from megamock.megamocks import AttributeTrackingBase, NonCallableMegaMock
+from megamock.megapatches import MegaPatch
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
@@ -23,6 +24,15 @@ class TestAttributeTrackingBase:
     def test_top_of_stacktrace_shortens_path(self) -> None:
         obj = TestAttributeTrackingBase.Sample()
         assert obj.top_of_stacktrace[0].startswith("...")
+
+    def test_top_of_stacktrace_root_folder(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+
+        MegaPatch.it(
+            AttributeTrackingBase.format_stacktrace,
+            return_value=['"file_in_root.py", line 1,  something something'],
+        )
+        assert obj.top_of_stacktrace[0].startswith('"file_in_root.py')
 
 
 class TestMegaMock:
