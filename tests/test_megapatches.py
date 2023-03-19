@@ -1,5 +1,6 @@
 import pytest
 from megamock import MegaPatch
+from megamock.megamocks import UseRealLogic
 from megamock.megapatches import MegaMock
 from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
 from tests.simple_app.bar import some_func, Bar
@@ -96,6 +97,21 @@ class TestMegaPatchPatching:
         MegaPatch.it(OtherFoo.some_method, return_value="sm")
 
         assert Foo("s").some_method() == "sm"
+
+    @pytest.mark.xfail
+    def test_patch_with_real_logic(self) -> None:
+        # this currently fails because the object created by autospec
+        # isn't using the MegaMock code path
+        MegaPatch.it(Foo.some_method, return_value=UseRealLogic)
+
+        assert Foo("s").some_method() == "a"
+
+    def test_patch_class_and_enable_real_logic(self) -> None:
+        megapatch = MegaPatch.it(Foo)
+
+        megapatch.return_value.some_method.return_value = UseRealLogic
+
+        assert Foo("s").some_method() == "value"
 
 
 class TestMegaPatchAutoStart:
