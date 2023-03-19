@@ -221,11 +221,6 @@ class _MegaMockMixin:
     def _get_child_mock(self, /, **kw) -> MegaMock:
         return MegaMock(_parent_mega_mock=self, **kw)
 
-    # def __getattribute__(self, name: str) -> Any:
-    #     if name != "__dict__" and self.__dict__.get("_use_real", False):
-    #         return getattr(self.__dict__["megamock_spec"], name)
-    #     return super().__getattribute__(name)
-
     def __getattr__(self, key) -> Any:
         if key not in ("megamock_spy", "megamock_spied_access") and self.megamock_spy:
             result = getattr(self.megamock_spy, key)
