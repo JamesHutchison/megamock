@@ -281,6 +281,56 @@ class _MegaMockMixin:
                 AttributeAssignment.for_current_stack(key, value)
             )
 
+    def _get_spec_from_parents(
+        self, _parent_stack: list[_MegaMockMixin] | None = None
+    ) -> Any:
+        """
+        The built-in generate autospec function creates a few issues because
+        it bypasses some of the tooling, so the whole tree of mocks are created
+        without hitting MegaMock anywhere.
+
+        This function walks up the megamock parent tree to find the root,
+        then grabs the spec from there. It then walks back down, checking
+        the children of the wrapped mock for each MegaMock to see if one
+        of the legacy children mocks matches the wrapped mock from the
+        MegaMock that called this function. It then grabs the attribute
+        based on the name and the currently focused spec.
+        """
+        # to start, parent_stack is always empty
+        parent_stack = _parent_stack or []
+
+        # if this is a child mock, get the parent's spec
+        if self.megamock_parent:
+            cur_spec = self.megamock_parent._get_spec_from_parents(
+                parent_stack + [self]
+            )
+            # abort if for some reason there is no parent spec
+            if cur_spec is None:
+                return None
+        else:
+            # the root MegaMock will hit this logic branch
+            cur_spec = self.megamock_spec
+        if cur_spec:
+            if not (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")):
+                return None
+            if parent_stack:
+                # the oldest item is the first element. The child that called this
+                # will be the last element of parent_stack.
+                child_that_called_me = parent_stack[-1]
+                for child_name, obj in wrapped._mock_children.items():
+                    if obj is child_that_called_me.__dict__.get(
+                        "_MegaMockMixin__wrapped"
+                    ):
+                        return getattr(cur_spec, child_name)
+            else:
+                return cur_spec
+            # this is a class, and the child is an instance
+            if isinstance(cur_spec, type):
+                return cur_spec
+        # this will happen if the root has no spec
+        # or if the child that called this method cannot be located
+        return None
+
 
 class MegaMock(_MegaMockMixin, mock.MagicMock):
     @staticmethod
@@ -323,17 +373,17 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
             # TODO: both the megamock and wrapped mock have return values
             #       and they're both importnat, we're not just looking at one.
             if wrapped.__dict__.get("_mock_return_value") is UseRealLogic:
-                if not self.megamock_spec:
-                    raise SpecRequiredException()
+                if not (spec := self.megamock_spec):
+                    spec = self._get_spec_from_parents()
+                    if not spec:
+                        raise SpecRequiredException()
                 if self.megamock_parent:
-                    if hasattr(self.megamock_spec, "__func__"):
+                    if hasattr(spec, "__func__"):
                         # convert from bound method to unbound method
-                        return self.megamock_spec.__func__(
-                            self.megamock_parent, *args, **kwargs
-                        )
+                        return spec.__func__(self.megamock_parent, *args, **kwargs)
                     # instance of a class Mock
-                    return self.megamock_spec(self.megamock_parent, *args, **kwargs)
-                return self.megamock_spec(*args, **kwargs)
+                    return spec(self.megamock_parent, *args, **kwargs)
+                return spec(*args, **kwargs)
             result = wrapped(*args, **kwargs)
             if not isinstance(result, _MegaMockMixin) and isinstance(
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
