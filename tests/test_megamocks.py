@@ -332,3 +332,21 @@ class TestMegaMock:
 
             with pytest.raises(TypeError):
                 await mega_mock()
+
+        async def test_await_args(self) -> None:
+            mega_mock = AsyncMegaMock()
+
+            await mega_mock("foo", keyword_arg="bar")
+            assert mega_mock.await_args == mock.call("foo", keyword_arg="bar")
+
+        async def test_await_args_list(self) -> None:
+            mega_mock = AsyncMegaMock()
+
+            await mega_mock("first")
+            await mega_mock("second", keyword_arg="kwsecond")
+
+            expected_await_args_list = [
+                mock.call("first"),
+                mock.call("second", keyword_arg="kwsecond"),
+            ]
+            assert mega_mock.await_args_list == expected_await_args_list
