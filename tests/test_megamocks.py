@@ -359,7 +359,6 @@ class TestMegaMock:
     class TestUseRealLogic:
         def test_will_use_real_method_values(self) -> None:
             mega_mock = MegaMock(Foo("s"), spec_set=False)
-            mega_mock._s = "the value"
 
             # check preconditions
             assert isinstance(mega_mock.some_method(), MegaMock)
@@ -370,6 +369,13 @@ class TestMegaMock:
 
         def test_real_logic_uses_mock_object_values(self) -> None:
             mega_mock = MegaMock(Foo("s"))
+            mega_mock.moo = "fox"
+            mega_mock.what_moos.return_value = UseRealLogic
+
+            assert mega_mock.what_moos() == "The fox moos"
+
+        def test_real_logic_with_class_instance_shortcut(self) -> None:
+            mega_mock = MegaMock(Foo)
             mega_mock.moo = "fox"
             mega_mock.what_moos.return_value = UseRealLogic
 

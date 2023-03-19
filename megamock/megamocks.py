@@ -326,10 +326,13 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
                 if not self.megamock_spec:
                     raise SpecRequiredException()
                 if self.megamock_parent:
-                    # convert from bound method to unbound method
-                    return self.megamock_spec.__func__(
-                        self.megamock_parent, *args, **kwargs
-                    )
+                    if hasattr(self.megamock_spec, "__func__"):
+                        # convert from bound method to unbound method
+                        return self.megamock_spec.__func__(
+                            self.megamock_parent, *args, **kwargs
+                        )
+                    # instance of a class Mock
+                    return self.megamock_spec(self.megamock_parent, *args, **kwargs)
                 return self.megamock_spec(*args, **kwargs)
             result = wrapped(*args, **kwargs)
             if not isinstance(result, _MegaMockMixin) and isinstance(
