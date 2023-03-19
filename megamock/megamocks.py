@@ -281,23 +281,6 @@ class _MegaMockMixin:
                 AttributeAssignment.for_current_stack(key, value)
             )
 
-    # def __call__(self, *args: Any, **kwargs: Any) -> Any:
-    #     if self.return_value is UseRealLogic:
-    #         if not self.megamock_spec:
-    #             raise SpecRequiredException()
-    #         return self.megamock_spec(*args, **kwargs)
-    #     base_class = super()
-    #     return base_class(*args, **kwargs)  # type: ignore
-
-    # if isinstance(self, MegaMock):
-    #     return super(mock.MagicMock, self).__call__(*args, **kwds)
-    # elif isinstance(self, AsyncMegaMock):
-    #     return super(mock.AsyncMock, self).__call__(*args, **kwds)
-    # elif isinstance(self, NonCallableMegaMock):
-    #     return super(mock.NonCallableMagicMock, self).__call__(*args, **kwds)
-    # else:
-    #     raise TypeError("Noncallable type not supported")
-
 
 class MegaMock(_MegaMockMixin, mock.MagicMock):
     @staticmethod
