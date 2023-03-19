@@ -257,6 +257,7 @@ MegaPatch.it(
 
 # Behavior differences from `mock`
 - Using `MegaMock` is like using the `mock.create_autospec()` function
+  - This means a `MegaMock` object may support `async` functionality if the mocked object is async.
 - Using `MegaPatch` is like setting `autospec=True`
 - Mocking a class by default returns an instance of the class instead of a mocked type. This is like setting `instance=True`
 

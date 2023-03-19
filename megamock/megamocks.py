@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABCMeta
 from collections import defaultdict
 import copy
+from inspect import isawaitable, iscoroutinefunction
 import re
 import time
 import traceback
@@ -83,6 +84,19 @@ class SpyAccess(AttributeTrackingBase):
 
 
 class _MegaMockMixin:
+    USE_SUPER_SETATTR = {
+        # properties where the actual value uses a different name
+        # __setattr__ comes before property evaluation
+        "side_effect",
+        "called",
+        "call_count",
+        "call_args",
+        "call_args_list",
+        "await_count",
+        "await_args",
+        "await_args_list",
+    }
+
     def __init__(
         self,
         spec: Any = None,
@@ -96,14 +110,18 @@ class _MegaMockMixin:
         wraps: Any = None,
         spy: Any = None,
         spec_set=True,
-        instance=True,
+        instance=_MISSING,
         # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
     ) -> None:
+        if instance is _MISSING:
+            if iscoroutinefunction(spec) or isawaitable(spec):
+                instance = False
+            else:
+                instance = True
         self.megamock_spied_access: defaultdict[str, list[SpyAccess]] = defaultdict(
             list
         )
-        # self.megamock_spy = spy
         if wraps and spy:
             # if spy is used, then the spied value is also wrapped
             raise Exception("Cannot both wrap and spy")
@@ -128,6 +146,10 @@ class _MegaMockMixin:
                 )
                 self.__wrapped = autospeced_legacy_mock
             else:
+                # not wrapping a Mock object, so do init for super
+                # this is not done when __wrapped is set because things like
+                # mock calls occur on the wrapped object, but calling init
+                # would set values like call_args_list on this object
                 super().__init__(**kwargs)
         else:
             # there is a bug where simply checking for "return_value"
@@ -184,6 +206,7 @@ class _MegaMockMixin:
             return result
         raise AttributeError(key)
 
+    # TODO: adjust for delegating properties
     def __setattr__(self, key, value) -> None:
         if key != "_MegaMockMixin__wrapped" and self.__dict__.get("megamock_spy"):
             setattr(self.megamock_spy, key, value)
@@ -208,6 +231,8 @@ class _MegaMockMixin:
                     wrapped.__dict__[key] = value
                 else:
                     raise
+        elif key in self.USE_SUPER_SETATTR:
+            super().__setattr__(key, value)
         else:
             self.__dict__[key] = value
 
@@ -230,6 +255,8 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
         wraps: Any = None,
     ) -> NonCallableMegaMock | MegaMock:
         if not isinstance(mock_obj, (mock.MagicMock, mock.Mock)):
+            if isinstance(mock_obj, mock.AsyncMock):
+                return AsyncMegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
             return NonCallableMegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
         return MegaMock(_wraps_mock=mock_obj, spec=spec, wraps=wraps)
 
@@ -241,3 +268,11 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
 
 class NonCallableMegaMock(_MegaMockMixin, mock.NonCallableMagicMock):
     pass
+
+
+class AsyncMegaMock(MegaMock, mock.AsyncMock):
+    def __init__(self, *args, **kwargs) -> None:
+        super(MegaMock, self).__init__(*args, **kwargs)
+
+    def _get_child_mock(self, /, **kw) -> AsyncMegaMock:
+        return AsyncMegaMock(**kw)
