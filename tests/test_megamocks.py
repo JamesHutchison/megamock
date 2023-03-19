@@ -5,7 +5,12 @@ from unittest import mock
 import pytest
 
 from megamock import MegaMock
-from megamock.megamocks import AsyncMegaMock, AttributeTrackingBase, NonCallableMegaMock
+from megamock.megamocks import (
+    AsyncMegaMock,
+    AttributeTrackingBase,
+    NonCallableMegaMock,
+    UseRealLogic,
+)
 from megamock.megapatches import MegaPatch
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
@@ -350,3 +355,22 @@ class TestMegaMock:
                 mock.call("second", keyword_arg="kwsecond"),
             ]
             assert mega_mock.await_args_list == expected_await_args_list
+
+    class TestUseRealLogic:
+        def test_will_use_real_method_values(self) -> None:
+            mega_mock = MegaMock(Foo("s"), spec_set=False)
+            mega_mock._s = "the value"
+
+            # check preconditions
+            assert isinstance(mega_mock.some_method(), MegaMock)
+
+            mega_mock.some_method.return_value = UseRealLogic
+
+            assert mega_mock.some_method() == "value"
+
+        def test_real_logic_uses_mock_object_values(self) -> None:
+            mega_mock = MegaMock(Foo("s"))
+            mega_mock.moo = "fox"
+            mega_mock.what_moos.return_value = UseRealLogic
+
+            assert mega_mock.what_moos() == "The fox moos"

@@ -27,5 +27,8 @@ class Foo:
     def some_method(self) -> str:
         return "value"
 
+    def what_moos(self) -> str:
+        return f"The {self.moo} moos"
+
 
 foo_instance = Foo("global")
