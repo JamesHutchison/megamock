@@ -7,10 +7,10 @@ import traceback
 from abc import ABCMeta
 from collections import defaultdict
 from inspect import isawaitable, iscoroutinefunction
-from typing import Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from unittest import mock
 
-from megamock.type_util import MISSING
+from megamock.type_util import MISSING, Opt
 
 
 class SpecRequiredException(Exception):
@@ -98,10 +98,15 @@ class SpyAccess(AttributeTrackingBase):
         return SpyAccess(attr_name, attr_value, stacktrace)
 
 
-class _MegaMockMixin:
+T = TypeVar("T")
+
+
+class _MegaMockMixin(Generic[T]):
     """
     Mixin used by MegaMock, NonCallableMegaMock, and AsyncMegaMock
     """
+
+    # megamock_spec: T | None
 
     USE_SUPER_SETATTR = {
         # properties where the actual value uses a different name
@@ -118,7 +123,7 @@ class _MegaMockMixin:
 
     def __init__(
         self,
-        spec: Any = None,
+        spec: T | None = None,
         *,
         _wraps_mock: (
             mock.Mock
@@ -127,8 +132,8 @@ class _MegaMockMixin:
             | mock.NonCallableMagicMock
             | None
         ) = None,
-        wraps: Any = None,
-        spy: Any = None,
+        wraps: T | None = None,
+        spy: T | None = None,
         spec_set: bool = True,
         instance: bool | None = None,
         _parent_mega_mock: _MegaMockMixin | None = None,
@@ -197,6 +202,18 @@ class _MegaMockMixin:
                 self._mock_return_value_ = None
             self.__wrapped = _wraps_mock
             # self.__wrapped._megamock = self
+
+    if TYPE_CHECKING:
+
+        @property
+        def cast(self) -> T:
+            ...
+
+    else:
+
+        @property
+        def cast(self) -> Any:
+            return self
 
     @property
     def _mock_return_value(self) -> Any:
@@ -332,7 +349,7 @@ class _MegaMockMixin:
         return None
 
 
-class MegaMock(_MegaMockMixin, mock.MagicMock):
+class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
     @staticmethod
     def from_legacy_mock(
         mock_obj: (
@@ -341,7 +358,7 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
             | mock.NonCallableMock
             | mock.NonCallableMagicMock
         ),
-        spec: Any,
+        spec: T,
         wraps: Any = None,
         parent_megamock: MegaMock | _MegaMockMixin | None = None,
     ) -> NonCallableMegaMock | MegaMock:
@@ -398,11 +415,11 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
         return super().__call__(*args, **kwargs)
 
 
-class NonCallableMegaMock(_MegaMockMixin, mock.NonCallableMagicMock):
+class NonCallableMegaMock(_MegaMockMixin[T], mock.NonCallableMagicMock, Generic[T]):
     pass
 
 
-class AsyncMegaMock(MegaMock, mock.AsyncMock):
+class AsyncMegaMock(MegaMock[T], mock.AsyncMock, Generic[T]):
     def __init__(self, *args, **kwargs) -> None:
         super(MegaMock, self).__init__(*args, **kwargs)
 

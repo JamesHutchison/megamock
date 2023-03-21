@@ -12,6 +12,7 @@ from megamock.megamocks import (
     UseRealLogic,
 )
 from megamock.megapatches import MegaPatch
+from megamock.type_util import MISSING
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
@@ -205,7 +206,7 @@ class TestMegaMock:
 
     class TestMegaMockAttributeAssignment:
         def test_grabs_expected_stacktrace(self) -> None:
-            mega_mock = MegaMock()
+            mega_mock: MegaMock = MegaMock()
 
             mega_mock.foo = "bar"
 
@@ -216,7 +217,7 @@ class TestMegaMock:
                 assert "/megamocks.py" not in frame.filename
 
         def test_multiple_assignments(self) -> None:
-            mega_mock = MegaMock()
+            mega_mock: MegaMock = MegaMock()
             mega_mock.foo = "foo"
             mega_mock.bar = "bar"
 
@@ -280,7 +281,7 @@ class TestMegaMock:
 
     class TestAsyncMock:
         async def test_async_mock_basics(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
             assert asyncio.iscoroutinefunction(mega_mock) is True
             assert inspect.isawaitable(mega_mock()) is True
 
@@ -288,14 +289,14 @@ class TestMegaMock:
             assert mega_mock.await_count == 1
 
         async def test_function_side_effect(self) -> None:
-            mega_mock = AsyncMegaMock(side_effect=lambda: 5)
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=lambda: 5)
 
             result = await mega_mock()
             assert result == 5
             assert mega_mock.call_count == 1
 
         async def test_exception_side_effect(self) -> None:
-            mega_mock = AsyncMegaMock(side_effect=Exception("whoops!"))
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=Exception("whoops!"))
 
             with pytest.raises(Exception) as exc:
                 await mega_mock()
@@ -303,7 +304,7 @@ class TestMegaMock:
             assert str(exc.value) == "whoops!"
 
         async def test_iterable_side_effect(self) -> None:
-            mega_mock = AsyncMegaMock(side_effect=[1, 2, 3])
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=[1, 2, 3])
 
             first = await mega_mock()
             second = await mega_mock()
@@ -312,7 +313,7 @@ class TestMegaMock:
             assert [first, second, third] == [1, 2, 3]
 
         async def test_return_value_provided(self) -> None:
-            mega_mock = AsyncMegaMock(return_value=25)
+            mega_mock: AsyncMegaMock = AsyncMegaMock(return_value=25)
 
             assert await mega_mock() == 25
 
@@ -322,7 +323,7 @@ class TestMegaMock:
             await AsyncMegaMock()()
 
         async def test_altering_return_value(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
             mega_mock.return_value.return_value = 5
 
             result = await mega_mock()
@@ -339,13 +340,13 @@ class TestMegaMock:
                 await mega_mock()
 
         async def test_await_args(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
 
             await mega_mock("foo", keyword_arg="bar")
             assert mega_mock.await_args == mock.call("foo", keyword_arg="bar")
 
         async def test_await_args_list(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
 
             await mega_mock("first")
             await mega_mock("second", keyword_arg="kwsecond")
@@ -380,3 +381,15 @@ class TestMegaMock:
             mega_mock.what_moos.return_value = UseRealLogic
 
             assert mega_mock.what_moos() == "The fox moos"
+
+        def test_cast_types_to_the_spec_with_type(self) -> None:
+            mega_mock = MegaMock(Foo)
+            mega_mock.z = "z"
+
+            assert mega_mock.cast.z == "z"
+
+        def test_cast_types_to_the_spec_with_instance(self) -> None:
+            mega_mock = MegaMock(Foo("s"))
+            mega_mock.z = "z"
+
+            assert mega_mock.cast.z == "z"

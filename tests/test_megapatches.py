@@ -1,3 +1,5 @@
+import typing
+from unittest.mock import MagicMock
 import pytest
 from megamock import MegaPatch
 from megamock.megamocks import UseRealLogic
@@ -29,7 +31,7 @@ class TestMegaPatchPatching:
 
     def test_patch_class_instance(self) -> None:
         patch = MegaPatch.it(Foo)
-        patch.return_value.z = "b"
+        patch.return_value.cast.z = "b"
 
         assert Foo("").z == "b"
 

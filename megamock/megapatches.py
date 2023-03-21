@@ -3,7 +3,7 @@ from functools import cached_property
 import inspect
 import logging
 import sys
-from typing import Any
+from typing import Annotated, Any, Generic, TypeVar, Union, cast
 from unittest import mock
 from varname import argname  # type: ignore
 
@@ -11,6 +11,9 @@ from megamock.import_references import References
 from megamock.megamocks import _MegaMockMixin, MegaMock
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+V = TypeVar("V", bound=type)
 
 
 class _MISSING:
@@ -148,7 +151,7 @@ class MegaPatch:
         if isinstance(thing, _MegaMockMixin):
             thing = thing.megamock_spec
         if isinstance(thing, cached_property):
-            thing = thing.func
+            thing = thing.func  # type: ignore
 
         passed_in_name = argname("thing", vars_only=False)
 
