@@ -24,7 +24,6 @@ asttokens = "~2.2.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
-mypy = "^0.991"
 flake8 = "^6.0.0"
 pytest = "^7.2.1"
 pytest-asyncio = "^0.20.3"
