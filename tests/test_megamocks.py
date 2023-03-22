@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from typing import cast
+from typing import Callable, cast
 from unittest import mock
 
 import pytest
@@ -398,8 +398,21 @@ class TestMegaMock:
 
             assert mega_mock.megacast.z == "z"
 
-    class TestMegaCastReturn:
-        def test_megacast_return(self) -> None:
+        def test_using_function(self) -> None:
+            def some_func(val: str) -> str:
+                return val
+
+            mega_mock = MegaMock(some_func)
+            mega_mock.megacast.__module__  # should have no mypy errors
+
+    class TestMegaInstance:
+        def test_using_class(self) -> None:
             mega_mock = MegaMock(Foo, instance=False)
 
-            mega_mock.megacast_return.s  # should have no mypy errors
+            mega_mock.megainstance.s  # should have no mypy errors
+            mega_mock.megainstance.moo = "fox"
+
+            # check preconditions
+            assert cast(Foo, mega_mock("s")).moo == "fox"  # should not error
+
+            mega_mock.megainstance is Foo("s")

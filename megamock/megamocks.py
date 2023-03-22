@@ -6,7 +6,7 @@ import time
 import traceback
 from abc import ABCMeta
 from collections import defaultdict
-from inspect import isawaitable, iscoroutinefunction
+from inspect import isawaitable, isclass, iscoroutinefunction
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
 from unittest import mock
 
@@ -208,7 +208,15 @@ class _MegaMockMixin(Generic[T]):
         return cast(T, self)
 
     @property
-    def megacast_return(self) -> T:
+    def megainstance(self) -> T:
+        """
+        Access the instance of a class mock.
+        Note that this will type as the class itself, not an instance,
+        due to limitations in mypy
+        """
+        if not callable(self) and not isclass(self.megamock_spec):
+            raise Exception("The megainstance property was intended for class mocks")
+        assert callable(self)  # make mypy happy
         return cast(T, self.return_value)
 
     @property
