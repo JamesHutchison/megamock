@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+from typing import cast
 from unittest import mock
 
 import pytest
@@ -51,7 +52,7 @@ class TestMegaMock:
         assert isinstance(MegaMock()(), MegaMock)
 
     def test_side_effect_value(self) -> None:
-        mega_mock = MegaMock(side_effect=lambda: 5)
+        mega_mock = MegaMock[None](side_effect=lambda: 5)
 
         assert mega_mock() == 5
 
@@ -66,7 +67,7 @@ class TestMegaMock:
             mega_mock()
 
     def test_call_args_update(self) -> None:
-        mega_mock = MegaMock()
+        mega_mock = MegaMock[None]()
         mega_mock()
 
         assert mega_mock.call_count == 1
@@ -153,7 +154,7 @@ class TestMegaMock:
     class TestFromLegacyMock:
         def test_when_autospec_used_on_class(self) -> None:
             legacy_mock = mock.create_autospec(SomeClass)
-            mega_mock: MegaMock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
+            mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
             assert mega_mock.megamock_spec is SomeClass
             assert hasattr(mega_mock, "b")
@@ -333,7 +334,9 @@ class TestMegaMock:
             async def some_func(val: str) -> str:
                 return val
 
-            mega_mock = AsyncMegaMock(some_func, return_value="actual return")
+            mega_mock: AsyncMegaMock = AsyncMegaMock(
+                some_func, return_value="actual return"
+            )
             assert await mega_mock("input val") == "actual return"
 
             with pytest.raises(TypeError):
@@ -382,14 +385,21 @@ class TestMegaMock:
 
             assert mega_mock.what_moos() == "The fox moos"
 
+    class TestMegaCast:
         def test_cast_types_to_the_spec_with_type(self) -> None:
             mega_mock = MegaMock(Foo)
             mega_mock.z = "z"
 
-            assert mega_mock.cast.z == "z"
+            assert mega_mock.megacast.z == "z"
 
         def test_cast_types_to_the_spec_with_instance(self) -> None:
             mega_mock = MegaMock(Foo("s"))
             mega_mock.z = "z"
 
-            assert mega_mock.cast.z == "z"
+            assert mega_mock.megacast.z == "z"
+
+    class TestMegaCastReturn:
+        def test_megacast_return(self) -> None:
+            mega_mock = MegaMock(Foo, instance=False)
+
+            mega_mock.megacast_return.s  # should have no mypy errors

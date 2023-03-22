@@ -7,10 +7,10 @@ import traceback
 from abc import ABCMeta
 from collections import defaultdict
 from inspect import isawaitable, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
 from unittest import mock
 
-from megamock.type_util import MISSING, Opt
+from megamock.type_util import MISSING
 
 
 class SpecRequiredException(Exception):
@@ -203,17 +203,13 @@ class _MegaMockMixin(Generic[T]):
             self.__wrapped = _wraps_mock
             # self.__wrapped._megamock = self
 
-    if TYPE_CHECKING:
+    @property
+    def megacast(self) -> T:
+        return cast(T, self)
 
-        @property
-        def cast(self) -> T:
-            ...
-
-    else:
-
-        @property
-        def cast(self) -> Any:
-            return self
+    @property
+    def megacast_return(self) -> T:
+        return cast(T, self.return_value)
 
     @property
     def _mock_return_value(self) -> Any:
@@ -361,7 +357,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
         spec: T,
         wraps: Any = None,
         parent_megamock: MegaMock | _MegaMockMixin | None = None,
-    ) -> NonCallableMegaMock | MegaMock:
+    ) -> NonCallableMegaMock[T] | MegaMock[T]:
         if not isinstance(mock_obj, (mock.MagicMock, mock.Mock)):
             if isinstance(mock_obj, mock.AsyncMock):
                 return AsyncMegaMock(
@@ -399,8 +395,8 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
                         # convert from bound method to unbound method
                         return spec.__func__(self.megamock_parent, *args, **kwargs)
                     # instance of a class Mock
-                    return spec(self.megamock_parent, *args, **kwargs)
-                return spec(*args, **kwargs)
+                    return cast(Callable, spec)(self.megamock_parent, *args, **kwargs)
+                return cast(Callable, spec)(*args, **kwargs)
             result = wrapped(*args, **kwargs)
             if not isinstance(result, _MegaMockMixin) and isinstance(
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
