@@ -155,7 +155,7 @@ class TestMegaMock:
             legacy_mock = mock.create_autospec(SomeClass)
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock.megamock_spec is SomeClass
+            assert mega_mock.megamock.spec is SomeClass
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -171,7 +171,7 @@ class TestMegaMock:
 
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock.megamock_spec is SomeClass
+            assert mega_mock.megamock.spec is SomeClass
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -184,7 +184,7 @@ class TestMegaMock:
 
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock.megamock_spec is SomeClass
+            assert mega_mock.megamock.spec is SomeClass
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -210,8 +210,8 @@ class TestMegaMock:
 
             mega_mock.foo = "bar"
 
-            assert "foo" in mega_mock.megamock_attr_assignments
-            stacktrace = mega_mock.megamock_attr_assignments["foo"][0].stacktrace
+            assert "foo" in mega_mock.megamock.attr_assignments
+            stacktrace = mega_mock.megamock.attr_assignments["foo"][0].stacktrace
             assert len(stacktrace) > 5
             for frame in stacktrace:
                 assert "/megamocks.py" not in frame.filename
@@ -223,11 +223,11 @@ class TestMegaMock:
 
             mega_mock.foo = "second"
 
-            assert len(mega_mock.megamock_attr_assignments["foo"]) == 2
-            assert len(mega_mock.megamock_attr_assignments["bar"]) == 1
+            assert len(mega_mock.megamock.attr_assignments["foo"]) == 2
+            assert len(mega_mock.megamock.attr_assignments["bar"]) == 1
 
-            assert mega_mock.megamock_attr_assignments["foo"][0].attr_value == "foo"
-            assert mega_mock.megamock_attr_assignments["foo"][1].attr_value == "second"
+            assert mega_mock.megamock.attr_assignments["foo"][0].attr_value == "foo"
+            assert mega_mock.megamock.attr_assignments["foo"][1].attr_value == "second"
 
     class TestWraps:
         def test_wraps_object(self) -> None:
@@ -272,9 +272,9 @@ class TestMegaMock:
             mega_mock.moo
             mega_mock.helpful_manager
 
-            assert len(mega_mock.megamock_spied_access) == 3
+            assert len(mega_mock.megamock.spied_access) == 3
             assert (
-                mega_mock.megamock_spied_access["z"][0]
+                mega_mock.megamock.spied_access["z"][0]
                 .stacktrace[0]
                 .filename.endswith("test_megamocks.py")
             )

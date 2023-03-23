@@ -1,7 +1,7 @@
 from typing import TypeVar, Union
 
 
-class _MISSING:
+class MISSING_TYPE:
     """
     Class to indicate a missing value
     """
@@ -10,6 +10,6 @@ class _MISSING:
 _T = TypeVar("_T")
 
 
-Opt = Union[_T, _MISSING]
+Opt = Union[_T, MISSING_TYPE]
 
-MISSING = _MISSING()
+MISSING = MISSING_TYPE()
