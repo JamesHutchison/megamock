@@ -7,7 +7,7 @@ import traceback
 from abc import ABCMeta
 from collections import defaultdict
 from inspect import isawaitable, isclass, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast, overload
+from typing import Any, Callable, Generic, TypeVar, cast
 from unittest import mock
 
 from megamock.type_util import MISSING
