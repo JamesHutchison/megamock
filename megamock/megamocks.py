@@ -298,34 +298,37 @@ class _MegaMockMixin(Generic[T]):
         if key in self.USE_SUPER_SETATTR:
             super().__setattr__(key, value)
         if self.megamock is not None:
-            if self.megamock.spy is not None:
-                setattr(self.megamock.spy, key, value)
-            elif (wrapped := self._wrapped_legacy_mock) is not None:
-                try:
-                    setattr(wrapped, key, value)
-                except AttributeError:
-                    # mock won't allow assignment of values assigned in __init__ or
-                    # elsewhere when spec_set is set. Check spec annotations and if the
-                    # value exists, allow assignment
-                    if key in self.megamock.spec.__annotations__:
-                        # do not check type if assigning a mock object
-                        # note that MegaMock is a subclass of NonCallableMagicMock
-                        if not isinstance(
-                            value, mock.NonCallableMock | mock.NonCallableMagicMock
-                        ):
-                            allowed_values = self.megamock.spec.__annotations__[key]
-                            if not isinstance(value, allowed_values):
-                                raise TypeError(
-                                    f"{value!r} is not an instance of {allowed_values}"
-                                )
-                        wrapped.__dict__[key] = value
-                    else:
-                        raise
-            else:
-                self.__dict__[key] = value
+            self._megamock_set_attr(key, value)
             self.megamock.attr_assignments[key].append(
                 AttributeAssignment.for_current_stack(key, value)
             )
+        else:
+            self.__dict__[key] = value
+
+    def _megamock_set_attr(self, key, value) -> None:
+        if self.megamock.spy is not None:
+            setattr(self.megamock.spy, key, value)
+        elif (wrapped := self._wrapped_legacy_mock) is not None:
+            try:
+                setattr(wrapped, key, value)
+            except AttributeError:
+                # mock won't allow assignment of values assigned in __init__ or
+                # elsewhere when spec_set is set. Check spec annotations and if the
+                # value exists, allow assignment
+                if key in self.megamock.spec.__annotations__:
+                    # do not check type if assigning a mock object
+                    # note that MegaMock is a subclass of NonCallableMagicMock
+                    if not isinstance(
+                        value, mock.NonCallableMock | mock.NonCallableMagicMock
+                    ):
+                        allowed_values = self.megamock.spec.__annotations__[key]
+                        if not isinstance(value, allowed_values):
+                            raise TypeError(
+                                f"{value!r} is not an instance of {allowed_values}"
+                            )
+                    wrapped.__dict__[key] = value
+                else:
+                    raise
         else:
             self.__dict__[key] = value
 
