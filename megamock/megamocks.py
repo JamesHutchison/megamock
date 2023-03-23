@@ -7,7 +7,7 @@ import traceback
 from abc import ABCMeta
 from collections import defaultdict
 from inspect import isawaitable, isclass, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast, overload
 from unittest import mock
 
 from megamock.type_util import MISSING
@@ -105,8 +105,6 @@ class _MegaMockMixin(Generic[T]):
     """
     Mixin used by MegaMock, NonCallableMegaMock, and AsyncMegaMock
     """
-
-    # megamock_spec: T | None
 
     USE_SUPER_SETATTR = {
         # properties where the actual value uses a different name

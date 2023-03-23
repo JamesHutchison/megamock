@@ -13,7 +13,6 @@ from megamock.megamocks import _MegaMockMixin, MegaMock
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
-V = TypeVar("V", bound=type)
 
 
 class _MISSING:
