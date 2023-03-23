@@ -1,5 +1,3 @@
-import typing
-from unittest.mock import MagicMock
 import pytest
 from megamock import MegaPatch
 from megamock.megamocks import UseRealLogic

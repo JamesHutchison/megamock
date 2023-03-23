@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from typing import Callable, cast
+from typing import cast
 from unittest import mock
 
 import pytest
@@ -13,7 +13,6 @@ from megamock.megamocks import (
     UseRealLogic,
 )
 from megamock.megapatches import MegaPatch
-from megamock.type_util import MISSING
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
