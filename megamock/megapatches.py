@@ -55,7 +55,7 @@ class MegaPatch(Generic[T]):
         return_value: Any,
     ) -> None:
         self._patches = patches
-        self._thing = thing
+        self._thing: Any | None = thing
         self._new_value: MegaMock = new_value
         self._return_value = return_value
 
@@ -68,15 +68,19 @@ class MegaPatch(Generic[T]):
         return self._thing
 
     @property
-    def new_value(self) -> MegaMock | Any:
+    def new_value(self) -> MegaMock[T] | Any:
         return self._new_value
 
     @property
-    def mock(self) -> MegaMock:
+    def mock(self) -> MegaMock[T]:
         val = self.new_value
         if not isinstance(val, MegaMock) and not hasattr(val, "return_value"):
             raise ValueError(f"New value {val!r} is not a mock!")
         return val
+
+    @property
+    def megainstance(self) -> T:
+        return self.mock.megainstance
 
     @property
     def return_value(self) -> MegaMock[T]:
@@ -123,15 +127,25 @@ class MegaPatch(Generic[T]):
 
     @staticmethod
     def it(
-        thing: T | None = None,
+        thing: T,
         /,
         new: Any | None = None,
-        spec_set=True,
+        spec_set: bool = True,
         behavior: MegaPatchBehavior | None = None,
         autostart: bool = True,
         mocker: object | None = None,
         **kwargs: Any,
     ) -> MegaPatch[T]:
+        """
+        MegaPatch something.
+
+        :param thing: The thing to patch
+        :param spec_set: If true, then raise an attribute error when setting an
+            attribute that doesn't exist on a class
+        :param behavior: The behavior to use when mocking
+        :param autostart: If true, then start the patch immediately
+        :param mocker: The object to use for patching. If None, then use the default
+        """
         if mocker is None:
             mocker = mock
         else:
@@ -148,6 +162,7 @@ class MegaPatch(Generic[T]):
         )
 
         if isinstance(thing, _MegaMockMixin):
+            assert thing.megamock.spec is not None
             thing = thing.megamock.spec
         if isinstance(thing, cached_property):
             thing = thing.func  # type: ignore

@@ -384,6 +384,20 @@ class TestMegaMock:
 
             assert mega_mock.what_moos() == "The fox moos"
 
+        def test_function_call_on_mock_object(self) -> None:
+            mega_mock = MegaMock(Foo("s"))
+            mega_mock.moo = "fox"
+            UseRealLogic(mega_mock.what_moos)
+
+            assert mega_mock.what_moos() == "The fox moos"
+
+        def test_function_call_on_cast_object(self) -> None:
+            mega_mock = MegaMock(Foo("s"))
+            mega_mock.moo = "fox"
+            UseRealLogic(mega_mock.megacast.what_moos)
+
+            assert mega_mock.megacast.what_moos() == "The fox moos"
+
     class TestMegaCast:
         def test_cast_types_to_the_spec_with_type(self) -> None:
             mega_mock = MegaMock(Foo)

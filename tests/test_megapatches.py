@@ -27,7 +27,7 @@ class TestMegaPatchPatching:
         with pytest.raises(TypeError):
             Foo("s")()  # type: ignore
 
-    def test_patch_class_instance(self) -> None:
+    def test_patch_class_instance_from_type(self) -> None:
         patch = MegaPatch.it(Foo)
         patch.return_value.megacast.z = "b"
 
@@ -109,7 +109,7 @@ class TestMegaPatchPatching:
     def test_patch_class_and_enable_real_logic(self) -> None:
         megapatch = MegaPatch.it(Foo)
 
-        megapatch.return_value.some_method.return_value = UseRealLogic
+        UseRealLogic(megapatch.megainstance.some_method)
 
         assert Foo("s").some_method() == "value"
 
@@ -154,6 +154,11 @@ class TestMegaPatchReturnValue:
         patch = MegaPatch.it(Foo)
 
         assert patch.return_value is Foo("s")
+
+    def test_megainstance_for_class_is_the_instance_object(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        assert patch.megainstance is Foo("s")
 
     def test_provided_return_value_is_the_return_value(self) -> None:
         ret_val: MegaMock = MegaMock()
