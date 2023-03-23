@@ -179,6 +179,26 @@ class TestMegaPatchReturnValue:
 
         assert Bar()() == "something"
 
+    def test_can_enable_real_logic_on_mock(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.return_value.some_method.return_value = UseRealLogic
+
+        assert Foo("s").some_method() == "value"
+
+    def test_enable_real_logic_with_casting(self) -> None:
+        patch = MegaPatch.it(Foo)
+        UseRealLogic(patch.return_value.some_method)
+
+        assert Foo("s").some_method() == "value"
+
+    # see: https://github.com/JamesHutchison/megamock/issues/43
+    @pytest.mark.xfail
+    def test_using_actual_thing_to_enable_real_logic(self) -> None:
+        MegaPatch.it(Foo)
+        UseRealLogic(Foo.some_method)
+
+        assert Foo("s").some_method() == "value"
+
 
 class TestMegaPatchObject:
 
