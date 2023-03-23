@@ -140,6 +140,10 @@ def test_something(...):
 
 You can focus your production code on creating an intuitive, "batteries included" interface for developers
 without making compromises for testability.
+
+`MegaMock` objects have the same attributes as regular `MagicMock`s plus one more - `megamock`.
+For example, `my_mega_mock.megamock.spy` is the object being spied, if set.
+
 Please see the guidance section (TODO) for more information on how and when you would use MegaMock.
 
 ### Use Case Examples
@@ -180,9 +184,9 @@ spied_class.some_method.call_args_list  # same as wraps
 
 # check whether a value was accessed
 # if things aren't as expected, you can pull up the debugger and see the stack traces
-assert len(spied_class.megamock_spied_access["some_attribute"]) == 1
+assert len(spied_class.megamock.spied_access["some_attribute"]) == 1
 
-spy_access_list = spied_class.megamock_spied_access["some_attribute"]
+spy_access_list = spied_class.megamock.spied_access["some_attribute"]
 spy_access: SpyAccess = spy_access_list[0]
 spy_access.attr_value  # shallow copy of what was returned
 spy_access.stacktrace  # where the access happened
@@ -309,12 +313,13 @@ do_something_that_invokes_that_function(...)
 
 # Debugging tools
 In addition to mocking capability, `MegaMock` objects can also help
-you debug. `MegaMock` objects have the attribute `megamock_attr_assignments`, which keeps a record of what attributes
+you debug. The `attr_assignments` dictionary, found under the `megamock`
+attribute in `MegaMock` objects, keep a record of what attributes
 were assigned, when, and what the value was. This object is a dictionary
 where the key is the attribute name, and the value is a list of
 `AttributeAssignment` objects.
 
-There is also `megamock_spied_access`, which is similar, but for
+There is also `spied_access`, which is similar, but for
 objects that are spied.
 
 If an attribute is coming out of a complex branch of logic with a value
@@ -330,4 +335,4 @@ To easily view the stacktrace in the IDE, there's a special property,
 
 ![MegaMock](docs/img/megamock-cropped.png)
 
-I didn't say it was a big art gallery.
+Nobody said it was a big art gallery. Feel free to submit a PR that helps fix that.
