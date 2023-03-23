@@ -31,6 +31,9 @@ class _UseRealLogic:
     Class to indicate that the real logic should be used
     """
 
+    def __call__(self, target_callable: Callable) -> None:
+        cast(MegaMock, target_callable).return_value = UseRealLogic
+
 
 UseRealLogic = _UseRealLogic()
 
