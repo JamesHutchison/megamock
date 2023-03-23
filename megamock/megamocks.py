@@ -6,8 +6,8 @@ import time
 import traceback
 from abc import ABCMeta
 from collections import defaultdict
-from inspect import isawaitable, iscoroutinefunction
-from typing import Any
+from inspect import isawaitable, isclass, iscoroutinefunction
+from typing import Any, Callable, Generic, TypeVar, cast
 from unittest import mock
 
 from megamock.type_util import MISSING
@@ -98,7 +98,10 @@ class SpyAccess(AttributeTrackingBase):
         return SpyAccess(attr_name, attr_value, stacktrace)
 
 
-class _MegaMockMixin:
+T = TypeVar("T")
+
+
+class _MegaMockMixin(Generic[T]):
     """
     Mixin used by MegaMock, NonCallableMegaMock, and AsyncMegaMock
     """
@@ -118,7 +121,7 @@ class _MegaMockMixin:
 
     def __init__(
         self,
-        spec: Any = None,
+        spec: T | None = None,
         *,
         _wraps_mock: (
             mock.Mock
@@ -127,8 +130,8 @@ class _MegaMockMixin:
             | mock.NonCallableMagicMock
             | None
         ) = None,
-        wraps: Any = None,
-        spy: Any = None,
+        wraps: T | None = None,
+        spy: T | None = None,
         spec_set: bool = True,
         instance: bool | None = None,
         _parent_mega_mock: _MegaMockMixin | None = None,
@@ -197,6 +200,22 @@ class _MegaMockMixin:
                 self._mock_return_value_ = None
             self.__wrapped = _wraps_mock
             # self.__wrapped._megamock = self
+
+    @property
+    def megacast(self) -> T:
+        return cast(T, self)
+
+    @property
+    def megainstance(self) -> T:
+        """
+        Access the instance of a class mock.
+        Note that this will type as the class itself, not an instance,
+        due to limitations in mypy
+        """
+        if not callable(self) and not isclass(self.megamock_spec):
+            raise Exception("The megainstance property was intended for class mocks")
+        assert callable(self)  # make mypy happy
+        return cast(T, self.return_value)
 
     @property
     def _mock_return_value(self) -> Any:
@@ -332,7 +351,7 @@ class _MegaMockMixin:
         return None
 
 
-class MegaMock(_MegaMockMixin, mock.MagicMock):
+class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
     @staticmethod
     def from_legacy_mock(
         mock_obj: (
@@ -341,10 +360,10 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
             | mock.NonCallableMock
             | mock.NonCallableMagicMock
         ),
-        spec: Any,
+        spec: T,
         wraps: Any = None,
         parent_megamock: MegaMock | _MegaMockMixin | None = None,
-    ) -> NonCallableMegaMock | MegaMock:
+    ) -> NonCallableMegaMock[T] | MegaMock[T]:
         if not isinstance(mock_obj, (mock.MagicMock, mock.Mock)):
             if isinstance(mock_obj, mock.AsyncMock):
                 return AsyncMegaMock(
@@ -382,8 +401,8 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
                         # convert from bound method to unbound method
                         return spec.__func__(self.megamock_parent, *args, **kwargs)
                     # instance of a class Mock
-                    return spec(self.megamock_parent, *args, **kwargs)
-                return spec(*args, **kwargs)
+                    return cast(Callable, spec)(self.megamock_parent, *args, **kwargs)
+                return cast(Callable, spec)(*args, **kwargs)
             result = wrapped(*args, **kwargs)
             if not isinstance(result, _MegaMockMixin) and isinstance(
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
@@ -398,11 +417,11 @@ class MegaMock(_MegaMockMixin, mock.MagicMock):
         return super().__call__(*args, **kwargs)
 
 
-class NonCallableMegaMock(_MegaMockMixin, mock.NonCallableMagicMock):
+class NonCallableMegaMock(_MegaMockMixin[T], mock.NonCallableMagicMock, Generic[T]):
     pass
 
 
-class AsyncMegaMock(MegaMock, mock.AsyncMock):
+class AsyncMegaMock(MegaMock[T], mock.AsyncMock, Generic[T]):
     def __init__(self, *args, **kwargs) -> None:
         super(MegaMock, self).__init__(*args, **kwargs)
 

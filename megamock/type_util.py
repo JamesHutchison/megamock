@@ -9,6 +9,7 @@ class _MISSING:
 
 _T = TypeVar("_T")
 
+
 Opt = Union[_T, _MISSING]
 
 MISSING = _MISSING()

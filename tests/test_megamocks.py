@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+from typing import cast
 from unittest import mock
 
 import pytest
@@ -50,7 +51,7 @@ class TestMegaMock:
         assert isinstance(MegaMock()(), MegaMock)
 
     def test_side_effect_value(self) -> None:
-        mega_mock = MegaMock(side_effect=lambda: 5)
+        mega_mock = MegaMock[None](side_effect=lambda: 5)
 
         assert mega_mock() == 5
 
@@ -65,7 +66,7 @@ class TestMegaMock:
             mega_mock()
 
     def test_call_args_update(self) -> None:
-        mega_mock = MegaMock()
+        mega_mock = MegaMock[None]()
         mega_mock()
 
         assert mega_mock.call_count == 1
@@ -152,7 +153,7 @@ class TestMegaMock:
     class TestFromLegacyMock:
         def test_when_autospec_used_on_class(self) -> None:
             legacy_mock = mock.create_autospec(SomeClass)
-            mega_mock: MegaMock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
+            mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
             assert mega_mock.megamock_spec is SomeClass
             assert hasattr(mega_mock, "b")
@@ -205,7 +206,7 @@ class TestMegaMock:
 
     class TestMegaMockAttributeAssignment:
         def test_grabs_expected_stacktrace(self) -> None:
-            mega_mock = MegaMock()
+            mega_mock: MegaMock = MegaMock()
 
             mega_mock.foo = "bar"
 
@@ -216,7 +217,7 @@ class TestMegaMock:
                 assert "/megamocks.py" not in frame.filename
 
         def test_multiple_assignments(self) -> None:
-            mega_mock = MegaMock()
+            mega_mock: MegaMock = MegaMock()
             mega_mock.foo = "foo"
             mega_mock.bar = "bar"
 
@@ -280,7 +281,7 @@ class TestMegaMock:
 
     class TestAsyncMock:
         async def test_async_mock_basics(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
             assert asyncio.iscoroutinefunction(mega_mock) is True
             assert inspect.isawaitable(mega_mock()) is True
 
@@ -288,14 +289,14 @@ class TestMegaMock:
             assert mega_mock.await_count == 1
 
         async def test_function_side_effect(self) -> None:
-            mega_mock = AsyncMegaMock(side_effect=lambda: 5)
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=lambda: 5)
 
             result = await mega_mock()
             assert result == 5
             assert mega_mock.call_count == 1
 
         async def test_exception_side_effect(self) -> None:
-            mega_mock = AsyncMegaMock(side_effect=Exception("whoops!"))
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=Exception("whoops!"))
 
             with pytest.raises(Exception) as exc:
                 await mega_mock()
@@ -303,7 +304,7 @@ class TestMegaMock:
             assert str(exc.value) == "whoops!"
 
         async def test_iterable_side_effect(self) -> None:
-            mega_mock = AsyncMegaMock(side_effect=[1, 2, 3])
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=[1, 2, 3])
 
             first = await mega_mock()
             second = await mega_mock()
@@ -312,7 +313,7 @@ class TestMegaMock:
             assert [first, second, third] == [1, 2, 3]
 
         async def test_return_value_provided(self) -> None:
-            mega_mock = AsyncMegaMock(return_value=25)
+            mega_mock: AsyncMegaMock = AsyncMegaMock(return_value=25)
 
             assert await mega_mock() == 25
 
@@ -322,7 +323,7 @@ class TestMegaMock:
             await AsyncMegaMock()()
 
         async def test_altering_return_value(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
             mega_mock.return_value.return_value = 5
 
             result = await mega_mock()
@@ -332,20 +333,22 @@ class TestMegaMock:
             async def some_func(val: str) -> str:
                 return val
 
-            mega_mock = AsyncMegaMock(some_func, return_value="actual return")
+            mega_mock: AsyncMegaMock = AsyncMegaMock(
+                some_func, return_value="actual return"
+            )
             assert await mega_mock("input val") == "actual return"
 
             with pytest.raises(TypeError):
                 await mega_mock()
 
         async def test_await_args(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
 
             await mega_mock("foo", keyword_arg="bar")
             assert mega_mock.await_args == mock.call("foo", keyword_arg="bar")
 
         async def test_await_args_list(self) -> None:
-            mega_mock = AsyncMegaMock()
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
 
             await mega_mock("first")
             await mega_mock("second", keyword_arg="kwsecond")
@@ -380,3 +383,35 @@ class TestMegaMock:
             mega_mock.what_moos.return_value = UseRealLogic
 
             assert mega_mock.what_moos() == "The fox moos"
+
+    class TestMegaCast:
+        def test_cast_types_to_the_spec_with_type(self) -> None:
+            mega_mock = MegaMock(Foo)
+            mega_mock.z = "z"
+
+            assert mega_mock.megacast.z == "z"
+
+        def test_cast_types_to_the_spec_with_instance(self) -> None:
+            mega_mock = MegaMock(Foo("s"))
+            mega_mock.z = "z"
+
+            assert mega_mock.megacast.z == "z"
+
+        def test_using_function(self) -> None:
+            def some_func(val: str) -> str:
+                return val
+
+            mega_mock = MegaMock(some_func)
+            mega_mock.megacast.__module__  # should have no mypy errors
+
+    class TestMegaInstance:
+        def test_using_class(self) -> None:
+            mega_mock = MegaMock(Foo, instance=False)
+
+            mega_mock.megainstance.s  # should have no mypy errors
+            mega_mock.megainstance.moo = "fox"
+
+            # check preconditions
+            assert cast(Foo, mega_mock("s")).moo == "fox"  # should not error
+
+            mega_mock.megainstance is Foo("s")

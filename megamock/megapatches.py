@@ -3,7 +3,7 @@ from functools import cached_property
 import inspect
 import logging
 import sys
-from typing import Any
+from typing import Any, Generic, TypeVar, cast
 from unittest import mock
 from varname import argname  # type: ignore
 
@@ -11,6 +11,8 @@ from megamock.import_references import References
 from megamock.megamocks import _MegaMockMixin, MegaMock
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 class _MISSING:
@@ -41,7 +43,7 @@ class MegaPatchBehavior:
         return MegaPatchBehavior(autospec=True)
 
 
-class MegaPatch:
+class MegaPatch(Generic[T]):
     __reserved_names = {"_patches", "_thing", "_path", "_mocked_value", "_return_value"}
     _active_patches: set[MegaPatch] = set()
 
@@ -77,8 +79,8 @@ class MegaPatch:
         return val
 
     @property
-    def return_value(self) -> Any:
-        return self._return_value
+    def return_value(self) -> MegaMock[T]:
+        return cast(MegaMock[T], self._return_value)
 
     def start(self) -> None:
         for patch in self._patches:
@@ -121,7 +123,7 @@ class MegaPatch:
 
     @staticmethod
     def it(
-        thing: Any = None,
+        thing: T | None = None,
         /,
         new: Any | None = None,
         spec_set=True,
@@ -129,7 +131,7 @@ class MegaPatch:
         autostart: bool = True,
         mocker: object | None = None,
         **kwargs: Any,
-    ) -> MegaPatch:
+    ) -> MegaPatch[T]:
         if mocker is None:
             mocker = mock
         else:
@@ -148,7 +150,7 @@ class MegaPatch:
         if isinstance(thing, _MegaMockMixin):
             thing = thing.megamock_spec
         if isinstance(thing, cached_property):
-            thing = thing.func
+            thing = thing.func  # type: ignore
 
         passed_in_name = argname("thing", vars_only=False)
 
@@ -158,7 +160,7 @@ class MegaPatch:
             mocker, module_path, passed_in_name, new, kwargs
         )
 
-        mega_patch = MegaPatch(thing, patches, new, return_value)
+        mega_patch = MegaPatch[T](thing, patches, new, return_value)
         if autostart:
             mega_patch.start()
         return mega_patch

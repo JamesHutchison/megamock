@@ -29,7 +29,7 @@ class TestMegaPatchPatching:
 
     def test_patch_class_instance(self) -> None:
         patch = MegaPatch.it(Foo)
-        patch.return_value.z = "b"
+        patch.return_value.megacast.z = "b"
 
         assert Foo("").z == "b"
 
@@ -156,7 +156,7 @@ class TestMegaPatchReturnValue:
         assert patch.return_value is Foo("s")
 
     def test_provided_return_value_is_the_return_value(self) -> None:
-        ret_val = MegaMock()
+        ret_val: MegaMock = MegaMock()
         patch = MegaPatch.it(some_func, return_value=ret_val)
 
         assert patch.return_value is ret_val
