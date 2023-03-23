@@ -148,7 +148,7 @@ class MegaPatch(Generic[T]):
         )
 
         if isinstance(thing, _MegaMockMixin):
-            thing = thing.megamock_spec
+            thing = thing.megamock.spec
         if isinstance(thing, cached_property):
             thing = thing.func  # type: ignore
 

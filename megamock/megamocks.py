@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import dataclass, field
 import re
 import time
 import traceback
@@ -10,7 +11,10 @@ from inspect import isawaitable, isclass, iscoroutinefunction
 from typing import Any, Callable, Generic, TypeVar, cast
 from unittest import mock
 
-from megamock.type_util import MISSING
+from megamock.type_util import MISSING_TYPE, MISSING
+
+
+T = TypeVar("T")
 
 
 class SpecRequiredException(Exception):
@@ -98,7 +102,29 @@ class SpyAccess(AttributeTrackingBase):
         return SpyAccess(attr_name, attr_value, stacktrace)
 
 
-T = TypeVar("T")
+_base_mock_types = (
+    mock.Mock
+    | mock.MagicMock
+    | mock.NonCallableMock
+    | mock.NonCallableMagicMock
+    | mock.AsyncMock
+)
+
+
+@dataclass
+class MegaMockAttributes:
+    parent: _MegaMockMixin | None = None
+    spec: Any | None = None
+    wraps: Any | None = None
+    spy: Any | None = None
+    attr_assignments: dict[str, list[AttributeAssignment]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+    spied_access: dict[str, list[SpyAccess]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+
+    _wrapped_mock: _base_mock_types | None = None
 
 
 class _MegaMockMixin(Generic[T]):
@@ -118,6 +144,10 @@ class _MegaMockMixin(Generic[T]):
         "await_args",
         "await_args_list",
     }
+
+    megamock: MegaMockAttributes = None  # type: ignore
+    _wrapped_legacy_mock: _base_mock_types | None
+    _mock_return_value_cache: Any | MISSING_TYPE = None
 
     def __init__(
         self,
@@ -151,40 +181,33 @@ class _MegaMockMixin(Generic[T]):
             False for the AsyncMock
         :param _parent_mega_mock: The parent MegaMock, for internal use
         """
-        self.megamock_parent = _parent_mega_mock
+        megamock_attrs = MegaMockAttributes()
+        self._wrapped_legacy_mock = None
+        self._mock_return_value_cache = MISSING
+
+        megamock_attrs.parent = _parent_mega_mock
         if instance is None:
             if iscoroutinefunction(spec) or isawaitable(spec):
                 instance = False
             else:
                 instance = True
-        self.megamock_spied_access: defaultdict[str, list[SpyAccess]] = defaultdict(
-            list
-        )
         if wraps and spy:
             # if spy is used, then the spied value is also wrapped
             raise Exception("Cannot both wrap and spy")
 
-        self.megamock_wraps = wraps = wraps or spy
-        self.megamock_spec = spec
-        self.megamock_attr_assignments: defaultdict[
-            str, list[AttributeAssignment]
-        ] = defaultdict(list)
+        megamock_attrs.wraps = wraps = wraps or spy
+        megamock_attrs.spec = spec
         if wraps and not _wraps_mock:
             _wraps_mock = mock.MagicMock(wraps=wraps)
 
-        self.megamock_spy = spy
+        megamock_attrs.spy = spy
 
-        # !important!
-        # once __wrapped is set, future assignments will be on the wrapped object
-        # __wrapped becomes "_MegaMockMixin__wrapped"
-        # it MUST be last
         if _wraps_mock is None:
             if spec is not None:
                 autospeced_legacy_mock = mock.create_autospec(
                     spec, spec_set=spec_set, instance=instance, **kwargs
                 )
-                self.__wrapped = autospeced_legacy_mock
-                # self.__wrapped._megamock = self
+                megamock_attrs._wrapped_mock = autospeced_legacy_mock
             else:
                 # not wrapping a Mock object, so do init for super
                 # this is not done when __wrapped is set because things like
@@ -198,8 +221,12 @@ class _MegaMockMixin(Generic[T]):
                 self._mock_return_value_ = _wraps_mock.return_value
             else:
                 self._mock_return_value_ = None
-            self.__wrapped = _wraps_mock
-            # self.__wrapped._megamock = self
+            megamock_attrs._wrapped_mock = _wraps_mock
+
+        # must be last as the setattr behavior will change after this
+        self.megamock = megamock_attrs
+        # shortcut to the wrapped mock to avoid performance penalty
+        self._wrapped_legacy_mock = megamock_attrs._wrapped_mock
 
     @property
     def megacast(self) -> T:
@@ -212,23 +239,21 @@ class _MegaMockMixin(Generic[T]):
         Note that this will type as the class itself, not an instance,
         due to limitations in mypy
         """
-        if not callable(self) and not isclass(self.megamock_spec):
+        if not callable(self) and not isclass(self.megamock.spec):
             raise Exception("The megainstance property was intended for class mocks")
         assert callable(self)  # make mypy happy
         return cast(T, self.return_value)
 
     @property
     def _mock_return_value(self) -> Any:
-        if self.__dict__.get("_MegaMockMixin__wrapped"):
-            if (
-                val := self.__dict__.get("_mock_return_value_cache", MISSING)
-            ) is MISSING:
+        if self._wrapped_legacy_mock is not None:
+            if (val := self._mock_return_value_cache) is MISSING:
                 if isinstance(
                     self._mock_return_value_,
                     mock.NonCallableMagicMock | mock.NonCallableMock,
                 ):
                     val = self._mock_return_value_cache = MegaMock.from_legacy_mock(
-                        self._mock_return_value_, None, self.megamock_wraps
+                        self._mock_return_value_, None, self.megamock.wraps
                     )
                 else:
                     val = self._mock_return_value_cache = self._mock_return_value_
@@ -241,24 +266,24 @@ class _MegaMockMixin(Generic[T]):
         return MegaMock(_parent_mega_mock=self, **kw)
 
     def __getattr__(self, key) -> Any:
-        if key not in ("megamock_spy", "megamock_spied_access") and self.megamock_spy:
-            result = getattr(self.megamock_spy, key)
+        if key != "megamock" and self.megamock.spy is not None:
+            result = getattr(self.megamock.spy, key)
             # if result is callable let wrapped handle it so that it's a mock object
             if not callable(result):
-                self.megamock_spied_access[key].append(
+                self.megamock.spied_access[key].append(
                     SpyAccess.for_current_stack(key, result)
                 )
                 return result
 
-        if (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")) is not None:
+        if (wrapped := self._wrapped_legacy_mock) is not None:
             result = getattr(wrapped, key)
             if not isinstance(result, _MegaMockMixin) and isinstance(
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
             ):
                 mega_result = MegaMock.from_legacy_mock(
                     result,
-                    getattr(self.megamock_spec, key, None),
-                    self.megamock_wraps,
+                    getattr(self.megamock.spec, key, None),
+                    self.megamock.wraps,
                     parent_megamock=self,
                 )
                 setattr(wrapped, key, mega_result)
@@ -267,38 +292,42 @@ class _MegaMockMixin(Generic[T]):
         raise AttributeError(key)
 
     def __setattr__(self, key, value) -> None:
-        if key != "_MegaMockMixin__wrapped" and self.__dict__.get("megamock_spy"):
-            setattr(self.megamock_spy, key, value)
-        elif key in self.USE_SUPER_SETATTR:
-            super().__setattr__(key, value)
-        elif (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")) is not None:
-            try:
-                setattr(wrapped, key, value)
-            except AttributeError:
-                # mock won't allow assignment of values assigned in __init__ or
-                # elsewhere when spec_set is set. Check spec annotations and if the
-                # value exists, allow assignment
-                if key in self.megamock_spec.__annotations__:
-                    # do not check type if assigning a mock object
-                    # note that MegaMock is a subclass of NonCallableMagicMock
-                    if not isinstance(
-                        value, mock.NonCallableMock | mock.NonCallableMagicMock
-                    ):
-                        allowed_values = self.megamock_spec.__annotations__[key]
-                        if not isinstance(value, allowed_values):
-                            raise TypeError(
-                                f"{value!r} is not an instance of {allowed_values}"
-                            )
-                    wrapped.__dict__[key] = value
-                else:
-                    raise
-        else:
+        if key in ("megamock", "_wrapped_legacy_mock"):
             self.__dict__[key] = value
-
-        if "megamock_attr_assignments" in self.__dict__:
-            self.__dict__["megamock_attr_assignments"][key].append(
+            return
+        if key in self.USE_SUPER_SETATTR:
+            super().__setattr__(key, value)
+        if self.megamock is not None:
+            if self.megamock.spy is not None:
+                setattr(self.megamock.spy, key, value)
+            elif (wrapped := self._wrapped_legacy_mock) is not None:
+                try:
+                    setattr(wrapped, key, value)
+                except AttributeError:
+                    # mock won't allow assignment of values assigned in __init__ or
+                    # elsewhere when spec_set is set. Check spec annotations and if the
+                    # value exists, allow assignment
+                    if key in self.megamock.spec.__annotations__:
+                        # do not check type if assigning a mock object
+                        # note that MegaMock is a subclass of NonCallableMagicMock
+                        if not isinstance(
+                            value, mock.NonCallableMock | mock.NonCallableMagicMock
+                        ):
+                            allowed_values = self.megamock.spec.__annotations__[key]
+                            if not isinstance(value, allowed_values):
+                                raise TypeError(
+                                    f"{value!r} is not an instance of {allowed_values}"
+                                )
+                        wrapped.__dict__[key] = value
+                    else:
+                        raise
+            else:
+                self.__dict__[key] = value
+            self.megamock.attr_assignments[key].append(
                 AttributeAssignment.for_current_stack(key, value)
             )
+        else:
+            self.__dict__[key] = value
 
     def _get_spec_from_parents(
         self, _parent_stack: list[_MegaMockMixin] | None = None
@@ -319,8 +348,8 @@ class _MegaMockMixin(Generic[T]):
         parent_stack = _parent_stack or []
 
         # if this is a child mock, get the parent's spec
-        if self.megamock_parent:
-            cur_spec = self.megamock_parent._get_spec_from_parents(
+        if self.megamock.parent:
+            cur_spec = self.megamock.parent._get_spec_from_parents(
                 parent_stack + [self]
             )
             # abort if for some reason there is no parent spec
@@ -328,18 +357,16 @@ class _MegaMockMixin(Generic[T]):
                 return None
         else:
             # the root MegaMock will hit this logic branch
-            cur_spec = self.megamock_spec
+            cur_spec = self.megamock.spec
         if cur_spec:
-            if not (wrapped := self.__dict__.get("_MegaMockMixin__wrapped")):
+            if not (wrapped := self._wrapped_legacy_mock):
                 return None
             if parent_stack:
                 # the oldest item is the first element. The child that called this
                 # will be the last element of parent_stack.
                 child_that_called_me = parent_stack[-1]
                 for child_name, obj in wrapped._mock_children.items():
-                    if obj is child_that_called_me.__dict__.get(
-                        "_MegaMockMixin__wrapped"
-                    ):
+                    if obj is child_that_called_me._wrapped_legacy_mock:
                         return getattr(cur_spec, child_name)
             else:
                 return cur_spec
@@ -386,22 +413,22 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
         )
 
     def __call__(self, *args, **kwargs) -> Any:
-        if wrapped := self.__dict__.get("_MegaMockMixin__wrapped"):
+        if wrapped := self._wrapped_legacy_mock:
             # cannot use wrapped.return_value because it will create a new
             # return_value object and use that
             # TODO: both the megamock and wrapped mock have return values
             #       and they're both importnat, we're not just looking at one.
             if wrapped.__dict__.get("_mock_return_value") is UseRealLogic:
-                if not (spec := self.megamock_spec):
+                if not (spec := self.megamock.spec):
                     spec = self._get_spec_from_parents()
                     if not spec:
                         raise SpecRequiredException()
-                if self.megamock_parent:
+                if self.megamock.parent:
                     if hasattr(spec, "__func__"):
                         # convert from bound method to unbound method
-                        return spec.__func__(self.megamock_parent, *args, **kwargs)
+                        return spec.__func__(self.megamock.parent, *args, **kwargs)
                     # instance of a class Mock
-                    return cast(Callable, spec)(self.megamock_parent, *args, **kwargs)
+                    return cast(Callable, spec)(self.megamock.parent, *args, **kwargs)
                 return cast(Callable, spec)(*args, **kwargs)
             result = wrapped(*args, **kwargs)
             if not isinstance(result, _MegaMockMixin) and isinstance(
@@ -410,7 +437,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
                 mega_result = MegaMock.from_legacy_mock(
                     result,
                     None,
-                    self.megamock_wraps,
+                    self.megamock.wraps,
                 )
                 return mega_result
             return result
