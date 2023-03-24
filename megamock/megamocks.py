@@ -423,7 +423,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
         *,
         instance: Literal[False] = False,
         side_effect: Any = None,
-        return_value: Any = None,
+        return_value: Any = MISSING,
         wraps: None = None,
         spy: None = None,
         spec_set: bool = True,
@@ -453,7 +453,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
         ) = None,
         instance: bool = True,
         side_effect: Any = None,
-        return_value: Any = None,
+        return_value: Any = MISSING,
         wraps: Any = None,
         spy: Any = None,
         spec_set: bool = True,
@@ -478,7 +478,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
         spec_set: bool = True,
         instance: bool | None = None,
         side_effect: T | None = None,
-        return_value: T | None = None,
+        return_value: T | None = MISSING,
         _parent_mega_mock: _MegaMockMixin | None = None,
     ) -> None:
         ...

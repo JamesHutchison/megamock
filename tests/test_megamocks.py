@@ -90,6 +90,7 @@ class TestMegaMock:
         set_return_value(mega_mock.megacast.some_method, "foo")
 
         assert mega_mock.some_method() == "foo"
+        assert mega_mock.megacast.some_method() == "foo"
 
     def test_allows_for_setting_different_type(self) -> None:
         mega_mock: Foo = MegaMock(Foo)  # mypy should not care
