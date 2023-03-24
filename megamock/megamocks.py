@@ -478,7 +478,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
         spec_set: bool = True,
         instance: bool | None = None,
         side_effect: T | None = None,
-        return_value: T | None = MISSING,
+        return_value: T | None = None,
         _parent_mega_mock: _MegaMockMixin | None = None,
     ) -> None:
         ...
