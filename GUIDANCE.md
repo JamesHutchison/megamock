@@ -269,7 +269,7 @@ def get_super_complex_thing_for_today(data_blob):
 def test_that(self) -> None:
     data_blob = MegaMock(DataBlob)
     today = MegaMock(datetime.date)
-    expected_return = MegaMock[None]()
+    expected_return = MegaMock()
 
     patch = MegaPatch.it(datetime.date.today, return_value=today)
     patch = MegaPatch.it(get_super_complex_thing_for_date)
