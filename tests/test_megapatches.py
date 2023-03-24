@@ -2,6 +2,7 @@ import pytest
 from megamock import MegaPatch
 from megamock.megamocks import UseRealLogic
 from megamock.megapatches import MegaMock
+from megamock.megas import Mega
 from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
 from tests.simple_app.bar import some_func, Bar
 from tests.simple_app.foo import Foo, bar, foo_instance
@@ -76,7 +77,7 @@ class TestMegaPatchPatching:
         assert Foo("").moo == expected
 
     def test_patch_cached_property(self) -> None:
-        expected = MegaMock(spec=HelpfulManager)
+        expected = MegaMock.it(spec=HelpfulManager)
         MegaPatch.it(Foo.helpful_manager, new=expected)
 
         assert Foo("").helpful_manager is expected
@@ -109,7 +110,7 @@ class TestMegaPatchPatching:
     def test_patch_class_and_enable_real_logic(self) -> None:
         megapatch = MegaPatch.it(Foo)
 
-        UseRealLogic(megapatch.megainstance.some_method)
+        Mega(megapatch.megainstance.some_method).use_real_logic()
 
         assert Foo("s").some_method() == "value"
 
@@ -187,7 +188,7 @@ class TestMegaPatchReturnValue:
 
     def test_enable_real_logic_with_casting(self) -> None:
         patch = MegaPatch.it(Foo)
-        UseRealLogic(patch.return_value.some_method)
+        Mega(patch.return_value.megacast.some_method).use_real_logic()
 
         assert Foo("s").some_method() == "value"
 
@@ -195,7 +196,7 @@ class TestMegaPatchReturnValue:
     @pytest.mark.xfail
     def test_using_actual_thing_to_enable_real_logic(self) -> None:
         MegaPatch.it(Foo)
-        UseRealLogic(Foo.some_method)
+        Mega(Foo.some_method).use_real_logic()
 
         assert Foo("s").some_method() == "value"
 
@@ -228,3 +229,9 @@ class TestAsyncPatching:
         MegaPatch.it(SomeClassWithAsyncMethods.some_method, return_value="val")
 
         assert await (SomeClassWithAsyncMethods().some_method("s")) == "val"
+
+
+class TestGotchaCheck:
+    def test_raises_value_error_if_autospec_and_use_real_logic(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo, autospec=True, return_value=UseRealLogic)

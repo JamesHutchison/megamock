@@ -8,11 +8,12 @@ from unittest import mock
 from varname import argname  # type: ignore
 
 from megamock.import_references import References
-from megamock.megamocks import _MegaMockMixin, MegaMock
+from megamock.megamocks import _MegaMockMixin, _UseRealLogic, MegaMock
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 
 class _MISSING:
@@ -43,7 +44,7 @@ class MegaPatchBehavior:
         return MegaPatchBehavior(autospec=True)
 
 
-class MegaPatch(Generic[T]):
+class MegaPatch(Generic[T, U]):
     __reserved_names = {"_patches", "_thing", "_path", "_mocked_value", "_return_value"}
     _active_patches: set[MegaPatch] = set()
 
@@ -53,6 +54,7 @@ class MegaPatch(Generic[T]):
         patches: list[mock._patch],
         new_value: MegaMock | Any,
         return_value: Any,
+        # _merged_type: type[U] | None = None,
     ) -> None:
         self._patches = patches
         self._thing: Any | None = thing
@@ -68,23 +70,23 @@ class MegaPatch(Generic[T]):
         return self._thing
 
     @property
-    def new_value(self) -> MegaMock[T] | Any:
+    def new_value(self) -> MegaMock[T, U] | Any:
         return self._new_value
 
     @property
-    def mock(self) -> MegaMock[T]:
+    def mock(self) -> MegaMock[T, U]:
         val = self.new_value
         if not isinstance(val, MegaMock) and not hasattr(val, "return_value"):
             raise ValueError(f"New value {val!r} is not a mock!")
         return val
 
     @property
-    def megainstance(self) -> T:
+    def megainstance(self) -> U:
         return self.mock.megainstance
 
     @property
-    def return_value(self) -> MegaMock[T]:
-        return cast(MegaMock[T], self._return_value)
+    def return_value(self) -> MegaMock[T, U]:
+        return cast(MegaMock[T, U], self._return_value)
 
     def start(self) -> None:
         for patch in self._patches:
@@ -135,7 +137,7 @@ class MegaPatch(Generic[T]):
         autostart: bool = True,
         mocker: object | None = None,
         **kwargs: Any,
-    ) -> MegaPatch[T]:
+    ):
         """
         MegaPatch something.
 
@@ -175,7 +177,7 @@ class MegaPatch(Generic[T]):
             mocker, module_path, passed_in_name, new, kwargs
         )
 
-        mega_patch = MegaPatch[T](thing, patches, new, return_value)
+        mega_patch = MegaPatch[T, type[MegaMock | T]](thing, patches, new, return_value)
         if autostart:
             mega_patch.start()
         return mega_patch
@@ -189,6 +191,9 @@ class MegaPatch(Generic[T]):
         behavior: MegaPatchBehavior,
     ) -> tuple[Any, Any]:
         provided_return_value = kwargs.pop("return_value", _MISSING)
+
+        MegaPatch._gotcha_check(provided_return_value, behavior)
+
         if new_given is None:
             if behavior.autospec:
                 new, return_value = MegaPatch._get_new_and_return_value_with_autospec(
@@ -199,7 +204,7 @@ class MegaPatch(Generic[T]):
                     return_value = MegaMock()
                 else:
                     return_value = provided_return_value
-                new = MegaMock(return_value=return_value)
+                new = MegaMock[None, None](return_value=return_value)
         else:
             new = new_given
             if hasattr(new, "return_value"):
@@ -211,6 +216,16 @@ class MegaPatch(Generic[T]):
         assert return_value is not _MISSING
 
         return new, return_value
+
+    @staticmethod
+    def _gotcha_check(return_value: Any, behavior: MegaPatchBehavior) -> None:
+        # autospec does not use the MegaMock code path when building return values
+        # so this does not work as expected. It ends up returning a UseRealLogic object
+        if behavior.autospec and isinstance(return_value, _UseRealLogic):
+            raise ValueError(
+                "Setting the return value within MegaPatch.it "
+                "is currently not supported"
+            )
 
     @staticmethod
     def _determine_module_path(thing: Any, passed_in_name: str) -> str:
