@@ -297,7 +297,7 @@ import my_module
 from mega_mock import UseRealLogic
 
 mega_patch = MegaPatch.it(my_module.SomeClass)
-mega_patch.mock.some_pure_logic_method.return_value = UseRealLogic
+UseRealLogic(mega_patch.megainstance.some_pure_logic_method)
 
 do_something_that_invokes_that_function(...)
 ```
