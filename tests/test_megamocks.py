@@ -11,6 +11,7 @@ from megamock.megamocks import (
     AttributeTrackingBase,
     NonCallableMegaMock,
     UseRealLogic,
+    set_return_value,
 )
 from megamock.megapatches import MegaPatch
 from tests.conftest import SomeClass
@@ -83,6 +84,13 @@ class TestMegaMock:
         mega_mock = MegaMock(some_func)
         assert asyncio.iscoroutinefunction(mega_mock) is True
         assert inspect.isawaitable(mega_mock()) is True
+
+    def test_assigning_return_value(self) -> None:
+        mega_mock = MegaMock(Foo)
+        mega_mock.return_value.some_method
+        set_return_value(mega_mock.megainstance.some_method, "foo")
+
+        assert Foo("s").some_method() == "foo"
 
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:

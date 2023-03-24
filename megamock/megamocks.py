@@ -38,6 +38,14 @@ class _UseRealLogic:
 UseRealLogic = _UseRealLogic()
 
 
+def set_return_value(func: Callable, value: Any) -> None:
+    """
+    Helper function to set the return value of a function, when it has
+    already been cast to the actual function
+    """
+    cast(MegaMock, func).return_value = value
+
+
 class AttributeTrackingBase(metaclass=ABCMeta):
     stacktrace: list[traceback.FrameSummary]
 
