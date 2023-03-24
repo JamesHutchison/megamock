@@ -118,11 +118,4 @@ class Mega:
         """
         Helper function to have a MegaMock object use the real logic
         """
-        self.set_return_value(UseRealLogic)
-
-    def set_return_value(self, value: Any) -> None:
-        """
-        Helper function to set the return value of a function, when it has
-        already been cast to the actual function
-        """
-        cast(MegaMock, self._func).return_value = value
+        cast(MegaMock, self._func).return_value = UseRealLogic

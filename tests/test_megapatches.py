@@ -30,7 +30,7 @@ class TestMegaPatchPatching:
 
     def test_patch_class_instance_from_type(self) -> None:
         patch = MegaPatch.it(Foo)
-        patch.return_value.megacast.z = "b"
+        patch.return_value.z = "b"
 
         assert Foo("").z == "b"
 
@@ -188,7 +188,7 @@ class TestMegaPatchReturnValue:
 
     def test_enable_real_logic_with_casting(self) -> None:
         patch = MegaPatch.it(Foo)
-        Mega(patch.return_value.megacast.some_method).use_real_logic()
+        Mega(patch.return_value.some_method).use_real_logic()
 
         assert Foo("s").some_method() == "value"
 
