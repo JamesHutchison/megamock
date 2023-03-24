@@ -144,7 +144,7 @@ without making compromises for testability.
 `MegaMock` objects have the same attributes as regular `MagicMock`s plus one more - `megamock`.
 For example, `my_mega_mock.megamock.spy` is the object being spied, if set.
 
-Please see the guidance section (TODO) for more information on how and when you would use MegaMock.
+Please see the [guidance section](GUIDANCE.md) for more information on how and when you would use MegaMock.
 
 ### Use Case Examples
 
