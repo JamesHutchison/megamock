@@ -78,7 +78,7 @@ This stems from the nature that code is often written. A common programming tech
 an object is to type
 out the name of the class or function that you want, then press a keyboard shortcut to pull up
 the quick action menu and have it generate the import. The import is usually, but not always,
-a local import. This can create a divergence when patching an object, as in some modules,
+a local import. This can create a divergence when patching an object. In some modules,
 you may need to apply the patch on the module where the object was defined. In other modules,
 you would need to apply the patch where it is being used.
 
@@ -121,7 +121,18 @@ automatically does the start and stop for you, among a few other improvements.
 MegaPatch.it(SomeClass.some_func, return_value="val")
 ```
 
-Likewise, you may want to pass in a mock object to a function and test that. It's very easy to write
+MegaMock will not automatically stop patches for you. You can stop them using:
+
+```python
+MegaPatch.stop_all()
+```
+
+However, it's better to the built-in pytest plugin, if you are using pytest, which will automatically
+stop all patches every test.
+
+--------------------
+
+You may want to pass in a mock object to a function and test that. It's very easy to write
 mock code that looks like this:
 
 ```python
@@ -149,6 +160,7 @@ mock = mock.create_autospec(SomeClass, spec_set=True, instance=True)
 
 Now the mock object will have the same interface as `SomeClass`, will error if an attribute is assigned
 that isn't part of the definition, and it also is mock instance of SomeClass instead of a mock type.
+Likewise, attributes are only callable if they are actually callable.
 
 With MegaMock, doing this is as simple as:
 
@@ -158,7 +170,7 @@ mock = MegaMock(SomeClass)
 
 Another example where MegaMock can be helpful is when you want to _mostly_ mock out a class.
 This may be a common case in pytest fixtures where the fixture just mocks out the whole class,
-and then you want to selectively enable logic as needed. You may
+and then you want to selectively enable logic as needed. Using the built-in mock library, you may
 end up with something like this (highly simplified):
 
 ```python
@@ -275,3 +287,6 @@ a complex logic path that mutates it and the end result is not what was expected
 
 Similarly, spied objects have `mock.spied_access` which tracks the name and value of spied members, and their
 access times. If you're not hitting the expected logic paths, this, combined with attr_assignments, can be helpful.
+
+Prefer casting functions to their types, using `megacast` and `megainstance`. This allows the static type checkers
+to infer the actual type of the object and lets you leverage your IDE's autocompletion.
