@@ -8,7 +8,15 @@ import traceback
 from abc import ABCMeta
 from collections import defaultdict
 from inspect import isawaitable, isclass, iscoroutinefunction
-from typing import Any, Callable, Generic, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 from unittest import mock
 
 from megamock.type_util import MISSING_TYPE, MISSING
@@ -163,8 +171,14 @@ class _MegaMockMixin(Generic[T]):
 
     def __init__(
         self,
-        spec: T | None = None,
+        spec: T | type[T] | None = None,
         *,
+        wraps: T | None = None,
+        spy: T | None = None,
+        spec_set: bool = True,
+        instance: bool | None = None,
+        side_effect: Any = None,
+        return_value: Any = MISSING,
         _wraps_mock: (
             mock.Mock
             | mock.MagicMock
@@ -172,17 +186,12 @@ class _MegaMockMixin(Generic[T]):
             | mock.NonCallableMagicMock
             | None
         ) = None,
-        wraps: T | None = None,
-        spy: T | None = None,
-        spec_set: bool = True,
-        instance: bool | None = None,
         _parent_mega_mock: _MegaMockMixin | None = None,
         # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
     ) -> None:
         """
         :param spec: The MegaMock's specification (template object)
-        :param _wraps_mock: the wrapped mock, for internal use
         :param wraps: An object to wrap, this is included for legacy support. Prefer spy
         :param spy: An object to spy on. The mock will maintain the real behavior of the
             object, but will also track attribute access and assignments
@@ -191,6 +200,10 @@ class _MegaMockMixin(Generic[T]):
         :param instance: If True, the mock will be an instance of the spec. If False,
             the mock will be a class. By default this is True. This must be omitted or
             False for the AsyncMock
+        :param side_effect: The side effect to use for the mock. Exceptoins are raised,
+            fuctions are called, and iterables are returned in order in subsequent calls
+        :param return_value: The return value to use for the mock.
+        :param _wraps_mock: the wrapped mock, for internal use
         :param _parent_mega_mock: The parent MegaMock, for internal use
         """
         megamock_attrs = MegaMockAttributes()
@@ -213,6 +226,9 @@ class _MegaMockMixin(Generic[T]):
             _wraps_mock = mock.MagicMock(wraps=wraps)
 
         megamock_attrs.spy = spy
+        if return_value is not MISSING:
+            kwargs["return_value"] = return_value
+        kwargs["side_effect"] = side_effect
 
         if _wraps_mock is None:
             if spec is not None:
@@ -248,12 +264,12 @@ class _MegaMockMixin(Generic[T]):
     def megainstance(self) -> T:
         """
         Access the instance of a class mock.
-        Note that this will type as the class itself, not an instance,
-        due to limitations in mypy
         """
-        if not callable(self) and not isclass(self.megamock.spec):
+        if not isinstance(
+            self.megamock._wrapped_mock,
+            (mock.MagicMock, mock.Mock),  # callable mocks
+        ) or not isclass(self.megamock.spec):
             raise Exception("The megainstance property was intended for class mocks")
-        assert callable(self)  # make mypy happy
         return cast(T, self.return_value)
 
     @property
@@ -394,6 +410,142 @@ class _MegaMockMixin(Generic[T]):
 
 
 class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
+    @overload
+    def __init__(self: MegaMock[None]) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self: _MegaMockMixin[T],
+        spec: type[T],
+        *,
+        instance: Literal[False] = False,
+        side_effect: Any = None,
+        return_value: Any = None,
+        wraps: None = None,
+        spy: None = None,
+        spec_set: bool = True,
+        _wraps_mock: (
+            mock.Mock
+            | mock.MagicMock
+            | mock.NonCallableMock
+            | mock.NonCallableMagicMock
+            | None
+        ) = None,
+        _parent_mega_mock: _MegaMockMixin | None = None,
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self: _MegaMockMixin[T],
+        spec: T,
+        *,
+        _wraps_mock: (
+            mock.Mock
+            | mock.MagicMock
+            | mock.NonCallableMock
+            | mock.NonCallableMagicMock
+            | None
+        ) = None,
+        instance: Literal[True] = True,
+        side_effect: Any = None,
+        return_value: Any = None,
+        wraps: Any = None,
+        spy: Any = None,
+        spec_set: bool = True,
+        _parent_mega_mock: _MegaMockMixin | None = None,
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self: _MegaMockMixin[None],
+        *,
+        _wraps_mock: (
+            mock.Mock
+            | mock.MagicMock
+            | mock.NonCallableMock
+            | mock.NonCallableMagicMock
+            | None
+        ) = None,
+        side_effect: T | None = None,
+        return_value: T | None = None,
+        _parent_mega_mock: _MegaMockMixin | None = None,
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self: _MegaMockMixin[T],
+        spec: None = None,
+        *,
+        _wraps_mock: (
+            mock.Mock
+            | mock.MagicMock
+            | mock.NonCallableMock
+            | mock.NonCallableMagicMock
+            | None
+        ) = None,
+        wraps: T | None = None,
+        spy: T | None = None,
+        spec_set: bool = True,
+        instance: bool | None = None,
+        side_effect: Any = None,
+        return_value: Any = None,
+    ) -> None:
+        ...
+
+    def __init__(
+        self,
+        spec: T | type[T] | None = None,
+        *,
+        wraps: T | None = None,
+        spy: T | None = None,
+        spec_set: bool = True,
+        instance: bool | None = None,
+        side_effect: Any = None,
+        return_value: Any = MISSING,
+        _wraps_mock: (
+            mock.Mock
+            | mock.MagicMock
+            | mock.NonCallableMock
+            | mock.NonCallableMagicMock
+            | None
+        ) = None,
+        _parent_mega_mock: _MegaMockMixin | None = None,
+        # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
+        **kwargs,
+    ) -> None:
+        """
+        :param spec: The MegaMock's specification (template object)
+        :param wraps: An object to wrap, this is included for legacy support. Prefer spy
+        :param spy: An object to spy on. The mock will maintain the real behavior of the
+            object, but will also track attribute access and assignments
+        :param spec_set: If True, only attributes in the spec will be allowed. Assigning
+            attributes not part of the spec will result in a AttributeError
+        :param instance: If True, the mock will be an instance of the spec. If False,
+            the mock will be a class. By default this is True. This must be omitted or
+            False for the AsyncMock
+        :param side_effect: The side effect to use for the mock. Exceptoins are raised,
+            fuctions are called, and iterables are returned in order in subsequent calls
+        :param return_value: The return value to use for the mock.
+        :param _wraps_mock: the wrapped mock, for internal use
+        :param _parent_mega_mock: The parent MegaMock, for internal use
+        """
+        return super().__init__(
+            spec,
+            wraps=wraps,
+            spy=spy,
+            spec_set=spec_set,
+            instance=instance,
+            side_effect=side_effect,
+            return_value=return_value,
+            _wraps_mock=_wraps_mock,
+            _parent_mega_mock=_parent_mega_mock,
+            **kwargs,
+        )
+
     @staticmethod
     def from_legacy_mock(
         mock_obj: (

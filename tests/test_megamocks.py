@@ -52,7 +52,7 @@ class TestMegaMock:
         assert isinstance(MegaMock()(), MegaMock)
 
     def test_side_effect_value(self) -> None:
-        mega_mock = MegaMock[None](side_effect=lambda: 5)
+        mega_mock = MegaMock(side_effect=lambda: 5)
 
         assert mega_mock() == 5
 
@@ -67,7 +67,7 @@ class TestMegaMock:
             mega_mock()
 
     def test_call_args_update(self) -> None:
-        mega_mock = MegaMock[None]()
+        mega_mock = MegaMock()
         mega_mock()
 
         assert mega_mock.call_count == 1
@@ -87,10 +87,9 @@ class TestMegaMock:
 
     def test_assigning_return_value(self) -> None:
         mega_mock = MegaMock(Foo)
-        mega_mock.return_value.some_method
-        set_return_value(mega_mock.megainstance.some_method, "foo")
+        set_return_value(mega_mock.megacast.some_method, "foo")
 
-        assert Foo("s").some_method() == "foo"
+        assert mega_mock.some_method() == "foo"
 
     def test_allows_for_setting_different_type(self) -> None:
         mega_mock: Foo = MegaMock(Foo)  # mypy should not care
@@ -108,15 +107,15 @@ class TestMegaMock:
             mega_mock.assert_called_once_with("t")
 
     def test_return_value_equality_set_in_params(self) -> None:
-        result = MegaMock[None]()
-        callable = MegaMock[None](return_value=result)
+        result = MegaMock()
+        callable = MegaMock(return_value=result)
         callable.return_value = result
 
         assert callable("foo", "bar") is result
 
     def test_return_value_equality_set_via_attribute(self) -> None:
-        result = MegaMock[None]()
-        callable = MegaMock[None]()
+        result = MegaMock()
+        callable = MegaMock()
         callable.return_value = result
 
         assert callable("foo", "bar") is result
@@ -466,3 +465,19 @@ class TestMegaMock:
             assert cast(Foo, mega_mock("s")).moo == "fox"  # should not error
 
             mega_mock.megainstance is Foo("s")
+
+        def test_errors_if_not_a_class(self) -> None:
+            mega_mock = MegaMock(Foo, instance=True)
+
+            with pytest.raises(Exception) as exc:
+                mega_mock.megainstance
+
+            assert (
+                str(exc.value)
+                == "The megainstance property was intended for class mocks"
+            )
+
+        def test_calling_method_from_mega_instance(self) -> None:
+            mega_mock = MegaMock(Foo, instance=False)
+
+            mega_mock.megainstance.some_method()
