@@ -8,8 +8,7 @@ from unittest import mock
 from varname import argname  # type: ignore
 
 from megamock.import_references import References
-from megamock.megamocks import _MegaMockMixin, _UseRealLogic, MegaMock, UseRealLogic
-from megamock.megas import Mega
+from megamock.megamocks import _MegaMockMixin, _UseRealLogic, MegaMock
 
 logger = logging.getLogger(__name__)
 
