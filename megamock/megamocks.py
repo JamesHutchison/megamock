@@ -410,10 +410,12 @@ class _MegaMockMixin(Generic[T]):
 
 
 class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
+    # Types MegaMock()
     @overload
     def __init__(self: MegaMock[None]) -> None:
         ...
 
+    # types MegaMock(spec=SomeClass, instance=False, ...)
     @overload
     def __init__(
         self: _MegaMockMixin[T],
@@ -436,6 +438,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
     ) -> None:
         ...
 
+    # types MegaMock(spec=SomeInstance)
     @overload
     def __init__(
         self: _MegaMockMixin[T],
@@ -448,7 +451,7 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
             | mock.NonCallableMagicMock
             | None
         ) = None,
-        instance: Literal[True] = True,
+        instance: bool = True,
         side_effect: Any = None,
         return_value: Any = None,
         wraps: Any = None,
@@ -458,27 +461,10 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
     ) -> None:
         ...
 
+    # types MegaMock when spec is not provided
     @overload
     def __init__(
         self: _MegaMockMixin[None],
-        *,
-        _wraps_mock: (
-            mock.Mock
-            | mock.MagicMock
-            | mock.NonCallableMock
-            | mock.NonCallableMagicMock
-            | None
-        ) = None,
-        side_effect: T | None = None,
-        return_value: T | None = None,
-        _parent_mega_mock: _MegaMockMixin | None = None,
-    ) -> None:
-        ...
-
-    @overload
-    def __init__(
-        self: _MegaMockMixin[T],
-        spec: None = None,
         *,
         _wraps_mock: (
             mock.Mock
@@ -491,8 +477,9 @@ class MegaMock(_MegaMockMixin[T], mock.MagicMock, Generic[T]):
         spy: T | None = None,
         spec_set: bool = True,
         instance: bool | None = None,
-        side_effect: Any = None,
-        return_value: Any = None,
+        side_effect: T | None = None,
+        return_value: T | None = None,
+        _parent_mega_mock: _MegaMockMixin | None = None,
     ) -> None:
         ...
 

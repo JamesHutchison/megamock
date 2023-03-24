@@ -17,7 +17,6 @@ from megamock.megapatches import MegaPatch
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
-from tests.simple_app.helpful_manager import HelpfulManager
 
 
 class TestAttributeTrackingBase:
