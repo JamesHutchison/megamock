@@ -17,6 +17,7 @@ from megamock.megapatches import MegaPatch
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
+from tests.simple_app.helpful_manager import HelpfulManager
 
 
 class TestAttributeTrackingBase:
@@ -280,30 +281,24 @@ class TestMegaMock:
             assert isinstance(mega_mock.s, MegaMock)
 
     class TestSpy:
-        def test_equivalent_to_wraps_for_methods(self) -> None:
-            obj = Foo("s")
-            mega_mock = MegaMock(spy=obj)
+        @pytest.fixture(autouse=True)
+        def setup(self) -> None:
+            self.obj = Foo("s")
+            self.mega_mock = MegaMock(spy=self.obj)
 
-            assert mega_mock.some_method() == "value"
-            assert len(mega_mock.some_method.call_args_list) == 1
+        def test_equivalent_to_wraps_for_methods(self) -> None:
+            assert self.mega_mock.some_method() == "value"
+            assert len(self.mega_mock.some_method.call_args_list) == 1
 
         def test_supports_properties(self) -> None:
-            obj = Foo("s")
-            mega_mock = MegaMock(spy=obj)
-
-            mega_mock._s = "str"
-            assert mega_mock.s == "str"
+            self.mega_mock._s = "str"
+            assert self.mega_mock.s == "str"
 
         def test_supports_attributes(self) -> None:
-            obj = Foo("s")
-            mega_mock = MegaMock(spy=obj)
-
-            assert mega_mock._s == "s"
+            assert self.mega_mock._s == "s"
 
         def test_spies_on_attribute_access(self) -> None:
-            obj = Foo("s")
-            mega_mock = MegaMock(spy=obj)
-
+            mega_mock = self.mega_mock
             mega_mock.z
             mega_mock.moo
             mega_mock.helpful_manager
@@ -314,6 +309,9 @@ class TestMegaMock:
                 .stacktrace[0]
                 .filename.endswith("test_megamocks.py")
             )
+
+        def test_supports_megacast(self) -> None:
+            assert self.mega_mock.megacast.some_method() == "value"
 
     class TestAsyncMock:
         async def test_async_mock_basics(self) -> None:
