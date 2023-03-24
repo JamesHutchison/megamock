@@ -84,6 +84,35 @@ class TestMegaMock:
         assert asyncio.iscoroutinefunction(mega_mock) is True
         assert inspect.isawaitable(mega_mock()) is True
 
+    def test_allows_for_setting_different_type(self) -> None:
+        mega_mock: Foo = MegaMock(Foo)  # mypy should not care
+
+        assert mega_mock.z
+
+    def test_assert_called_once_with(self) -> None:
+        mega_mock = MegaMock(Foo, instance=False)
+
+        mega_mock("s")
+
+        mega_mock.assert_called_once_with("s")
+
+        with pytest.raises(AssertionError):
+            mega_mock.assert_called_once_with("t")
+
+    def test_return_value_equality_set_in_params(self) -> None:
+        result = MegaMock[None]()
+        callable = MegaMock[None](return_value=result)
+        callable.return_value = result
+
+        assert callable("foo", "bar") is result
+
+    def test_return_value_equality_set_via_attribute(self) -> None:
+        result = MegaMock[None]()
+        callable = MegaMock[None]()
+        callable.return_value = result
+
+        assert callable("foo", "bar") is result
+
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:
             mock_instance: SomeClass = MegaMock(SomeClass)

@@ -146,6 +146,7 @@ class _MegaMockMixin(Generic[T]):
         "await_count",
         "await_args",
         "await_args_list",
+        "return_value",
     }
 
     megamock: MegaMockAttributes = None  # type: ignore
