@@ -6,6 +6,7 @@ from types import ModuleType
 from megamock.import_references import References
 from .megapatches import MegaPatch
 from .megamocks import MegaMock
+from .megas import Mega
 
 orig_import = builtins.__import__
 
@@ -53,6 +54,7 @@ def start_import_mod() -> None:
 
 
 __all__ = [
+    "Mega",
     "MegaMock",
     "MegaPatch",
     "start_import_mod",
