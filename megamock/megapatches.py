@@ -50,6 +50,7 @@ class MegaPatch(Generic[T, U]):
 
     def __init__(
         self,
+        *,
         thing: Any,
         patches: list[mock._patch],
         new_value: MegaMock | Any,
@@ -177,7 +178,9 @@ class MegaPatch(Generic[T, U]):
             mocker, module_path, passed_in_name, new, kwargs
         )
 
-        mega_patch = MegaPatch[T, type[MegaMock | T]](thing, patches, new, return_value)
+        mega_patch = MegaPatch[T, type[MegaMock | T]](
+            thing=thing, patches=patches, new_value=new, return_value=return_value
+        )
         if autostart:
             mega_patch.start()
         return mega_patch
