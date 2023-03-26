@@ -1,7 +1,6 @@
-# MegaMock
+# **MegaMock** - _The Developer Experience Upgrade for Python Mocking_
 
-Pew pew! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-delimited path strings!
-Also sane defaults for mocking behavior, among other features!
+Pew pew! Sane defaults for mocking behavior! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-delimited path strings! Create tests faster than ever!
 
 Supported Python Versions: 3.10+
 ### Installation
