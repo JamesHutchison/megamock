@@ -14,10 +14,12 @@ MegaMock is a library that provides a better interface for mocking and patching 
 of patch doesn't have any gotchas based on how you import something, and it also automatically
 creates mocks using best practices. Additionally, the mocks have helpers to cast to the mocked type, allowing you to leverage your IDE's autocomplete.
 
+![MegaMock Example](docs/img/megamock-example.gif)
+
 Turn this:
 
 ```python
-class_mock = mock.create_autospec(ClassICareAbout)
+class_mock = mock.create_autospec(ClassICareAbout, instance=True)
 # cmd / alt clicking on "method_call" doesn't direct you to the definition
 class_mock.method_call.return_value = "some value"
 
