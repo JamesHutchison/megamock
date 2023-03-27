@@ -326,6 +326,6 @@ do_something_that_invokes_that_function(...)
 
 # Congrats on Reading This Far! Here's an Art Gallery!
 
-![MegaMock](docs/img/megamock-cropped.png)
+![MegaMock](docs/img/megamock-v2-cropped.png)
 
-Nobody said it was a big art gallery. Feel free to submit a PR that helps fix that.
+Nobody said it was a big art gallery. Feel free to submit a PR that helps fix that. No artistic skill required.
