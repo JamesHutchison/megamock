@@ -1,27 +1,17 @@
 # MegaMock Guidance
 ## About
-This guidance section is to help clarify the role of MegaMock, why, and how you would use it. If you're already convinced you want to
-try MegaMock and want to just jump in, there's no need to read this document at this time. See [General Guidance](#general-guidance) to jump straight
-to the guidance section.
+This guide explains the role and usage of MegaMock. If you're ready to use MegaMock, skip to the [General Guidance](#general-guidance) section.
 
 ## Why Mock?
-There's various camps of developers who have grown their careers via different backgrounds. Some languages
-have historically made mocking a pain in the butt, so developers have learned to work around it by following
-certain design patterns. This
-usually means writing code in a more verbose, complex pattern, that works around the ability to
-simply swap something out on demand. In many cases, attempting to not mock ends up muddying up the clarity
-of the interface for the developer who uses it, unless extra effort is spent creating a facade to hide
-the complexity.
-
-For example, consider a situation where you have one class, which makes 3rd party API calls. Which
+Consider a situation where you have one class, which makes 3rd party API calls. Which
 interface would you rather use?
 
 Interface A
 ```python
 class A:
-    def some_func(self) -> ClientApiResponse:
+    def some_func(self, args) -> ClientApiResponse:
         api_client = get_api_client_from_pool()
-        response = api_client.make_api_call()
+        response = api_client.make_api_call(some, args)
         # ... do something with response ...
 ```
 
@@ -31,9 +21,9 @@ class A:
     def __init__(self, client_pool: BaseApiClientPool):
         self.client_pool = client_pool
 
-    def some_func(self) -> BaseApiResponse:
+    def some_func(self, args) -> BaseApiResponse:
         api_client = self.client_pool.get_client()
-        response = api_client.make_api_call()
+        response = api_client.make_api_call(some, args)
         # ... do something with response ...
 ```
 
@@ -44,24 +34,22 @@ class A:
         self,
         client_pool: BaseApiClientPool,
         api_call_maker: BaseApiCallMaker,
+        args,
         _connect_timeout: int = 5,
         _read_timeout: int = 10,
         _retries: int = 3,
         _retry_strategy: BaseRetryStrategy = ExponentialRetryBackoffStrategy(),
     ) -> BaseApiResponse:
         api_client = client_pool.get_client(_connect_timeout, _read_timeout)
-        response = api_call_maker(api_client).make_api_call(_retries, _retry_strategy)
+        response = api_call_maker(api_client).make_api_call(args, retries=_retries, retry_strategy=_retry_strategy)
         # ... do something with response ...
 ```
 
-Trying to swap everything out with a replaceable part will start to snowball pretty quickly.
-This adds cognitive load to the developer. They need to tease out the actual purpose of the function,
-the actual classes that are being used in production, and decipher how the business domain maps
-to the classes presented. When a developer looks at the types passed in, they will find themselves
-landing on the base class when they "go to definition". They then need to navigate to the actual class,
-and hopefully not accidentally land on the test class. References to the actual class will be minimal,
-if they want to find the usages, they have to go back to the base class and find the usages there.
-This kind of navigation makes conceptually simple situations seem difficult to understand and navigate.
+Swapping everything with replaceable parts can lead to complexity, increasing cognitive load for
+developers. They must understand the function's purpose, identify production classes, and map
+the business domain to presented classes. Developers may struggle with code navigation, as they need
+to identify actual classes among base and test classes. This complexity can make simple situations
+harder to understand and navigate.
 
 It's better to have a simple interface that mirrors the business domain as much possible, and only
 introduce complexities where it is necessary.
@@ -188,7 +176,7 @@ With MegaMock, you can do this instead:
 
 ```python
 MegaPatch.it(MyClass)
-UseRealLogic(MyClass.megainstance.some_func)
+use_real_logic(MyClass.megainstance.some_func)
 
 do_test_logic(...)
 ```
@@ -196,24 +184,20 @@ do_test_logic(...)
 ## General Guidance
 
 MegaMock is intended to _replace_ the built in `unittest.mock` library. In many cases it can be
-a drop in replacement, although in the current alpha state that is not guaranteed. Currently,
-all "naked" MegaMock objects require a type annotation if a spec object is not passed in, due to
-a limitation in the Python static typing system. This limitation only affects you if you use static
-type checking.
+a drop in replacement.
 
 Do not write "Fake" and "Real" classes if you can avoid it. Instead of write real classes and use mocking
 when fake behavior is needed.
 
 Keep static typing in mind when writing code, even if you are writing a simple script that you are not
-type checking. While it may be tempting to do something like this, where "value to pass around" is
-actually a complex object:
+type checking. While it may be tempting to use strings when the "value to pass around" is a complex object:
 
 ```python
 mock = MegaMock(outgoing_function)
 
 func_under_test("value to pass around")
 
-mock.assert_called_once_with("value to pass around")
+assert Mega(mock).called_once_with("value to pass around")
 ```
 
 It's better to use mock objects instead, which won't fail when put under the scrutiny of mypy.
@@ -223,18 +207,20 @@ value_to_pass_around = MegaMock(the_type)
 
 func_under_test(value_to_pass_around)
 
-mock.assert_called_once_with(value_to_pass_around)
+assert Mega(mock).called_once_with(value_to_pass_around)
 ```
 
 When creating a test with a single mock, prefer using the name `mock` for the variable if it
 does not shadow another variable. Prefer `patch` for MegaPatch, under the same circumstances.
 
-You should almost always use `MegaPatch.it` instead of `MegaPatch` directly.
+You should almost always use `MegaPatch.it` instead of `MegaPatch` directly. When creating
+a `MegaMock` object with a spec, use `MegaMock.it(...)`.
 
 Avoid testing the implementation. When you test the implementation, you create a brittle test
 that easily breaks when the implementation changes. It can be very tempting to liberally
 create mocks of almost everything and validate that one slice of the code is properly calling
-another slice, but this should _generally_ be avoided.
+another slice, but this should _generally_ be avoided, and should never be the de facto way
+things are tested in your project.
 
 ```python
 def ive_got_the_power(x):
@@ -250,14 +236,16 @@ def test_ive_got_the_power():
     ive_got_the_power(2)
     assert patch.mock.called_once_with(2, 2)
 
-    # good
+    # good, test the public interface gives the desired result
     assert ive_got_the_power(2) == 4
 ```
 
 There are some exceptions. For example, a function may invoke complex inner logic with
-a defined interface contract, and you want to verify that it is interacting correctly.
-You don't want your test to care about the implementation of that inner logic.
+a defined interface contract and you want to verify that it is interacting correctly.
+It can be time saving and also create a faster performing test to treat that inner logic
+as a black box interface you are simply feeding into and reading from.
 In this case, you may want to mock out the inner logic and verify that the outer logic is calling it correctly.
+This only makes sense if the inner logic is already well tested.
 
 ```python
 def get_super_complex_thing_for_today(data_blob):
@@ -271,15 +259,14 @@ def test_that(self) -> None:
     today = MegaMock(datetime.date)
     expected_return = MegaMock()
 
-    patch = MegaPatch.it(datetime.date.today, return_value=today)
-    patch = MegaPatch.it(get_super_complex_thing_for_date)
+    datetime_patch = MegaPatch.it(datetime.date.today, return_value=today)
+    logic_patch = MegaPatch.it(get_super_complex_thing_for_date)
 
+    # validate returning the response from the complex logic
     assert get_super_complex_thing_for_today(data_blob) == get_super_complex_thing_for_date.return_value
-    assert patch.mock.called_once_with(data_blob, date=today)
+    # validate that the current date and data was passed in
+    assert Mega(logic_patch.mock).called_once_with(data_blob, date=today)
 ```
-
-In that same line of thought, don't write tests with a long set-up and tear-down if it could be as equally
-well tested using a mock, or is hitting an already well-tested code path.
 
 `MegaMock` objects keep track of attribute assignments using the `mock.attr_assignments` attribute. This
 is usually not needed, but in some uncommon cases, can be a helpful debugging tool when a mock goes through
@@ -288,5 +275,45 @@ a complex logic path that mutates it and the end result is not what was expected
 Similarly, spied objects have `mock.spied_access` which tracks the name and value of spied members, and their
 access times. If you're not hitting the expected logic paths, this, combined with attr_assignments, can be helpful.
 
-Prefer casting functions to their types, using `megacast` and `megainstance`. This allows the static type checkers
-to infer the actual type of the object and lets you leverage your IDE's autocompletion.
+Use `megainstance` to go from a mock class to the mock instance. This is typically used by `MegaPatch`. `MegaMock` will automatically
+create a mock instance of a passed in class, but you can change
+this behavior by setting `instance=False` when creating the mock.
+
+This library was written with a leaning towards `pytest`, which is a popular testing library. See [usage](README.md#usage) in
+the readme for more information about using the pytest plugin that comes with the library.
+
+# Behavior differences from `mock`
+- Using `MegaMock` is like using the `mock.create_autospec()` function
+  - This means a `MegaMock` object may support `async` functionality if the mocked object is async.
+- Using `MegaPatch` is like setting `autospec=True`
+- Mocking a class by default returns an instance of the class instead of a mocked type. This is like setting `instance=True`
+- As mentioned earlier in the readme, you don't need to care
+  how you import something.
+- Use `MegaMock.it(spec, ...)` and `MegaPatch.it(thing, ...)` instead
+  of `MegaMock(spec=spec)` and `MegaPatch(thing=thing)` so that type inference
+  works best.
+- Mock lacks static type inference while MegaMock provides unions
+  of the `MegaMock` object and the object used as a spec.
+
+# Debugging tools
+In addition to mocking capability, `MegaMock` objects can also help
+you debug. The `attr_assignments` dictionary, found under the `megamock`
+attribute in `MegaMock` objects, keep a record of what attributes
+were assigned, when, and what the value was. This object is a dictionary
+where the key is the attribute name, and the value is a list of
+`AttributeAssignment` objects.
+
+There is also `spied_access`, which is similar, but for
+objects that are spied.
+
+As mentioned earlier in the readme, `Mega.last_assertion_error` can
+be used to access the assertion error thrown by mock.
+
+If an attribute is coming out of a complex branch of logic with a value
+you do not expect, you can check out these attributes in the debugger
+and get an idea of where things are going wrong.
+
+To easily view the stacktrace in the IDE, there's a special property,
+`top_of_stacktrace`
+
+![Top of Stack](docs/img/top-of-stack.png)

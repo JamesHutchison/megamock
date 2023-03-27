@@ -160,7 +160,8 @@ def test_something(...):
 `MegaMock` objects have the same attributes as regular `MagicMock`s plus `megamock` and `megainstance`
 For example, `my_mega_mock.megamock.spy` is the object being spied, if set. `my_class_mock.megainstance` is the instance returned when the class is instantiated.
 
-Please see the [guidance section](GUIDANCE.md) for more information on how and when you would use MegaMock.
+The [guidance document](GUIDANCE.md) is available to provide in-depth information on using mocking and MegaMock. Continuing reading to
+quickly jump in to examples.
 
 -----------------------
 
@@ -314,43 +315,6 @@ Mega(mega_patch.megainstance.some_pure_logic_method).use_real_logic()
 
 do_something_that_invokes_that_function(...)
 ```
-
-# Behavior differences from `mock`
-- Using `MegaMock` is like using the `mock.create_autospec()` function
-  - This means a `MegaMock` object may support `async` functionality if the mocked object is async.
-- Using `MegaPatch` is like setting `autospec=True`
-- Mocking a class by default returns an instance of the class instead of a mocked type. This is like setting `instance=True`
-- As mentioned earlier in the readme, you don't need to care
-  how you import something.
-- Use `MegaMock.it(spec, ...)` and `MegaPatch.it(thing, ...)` instead
-  of `MegaMock(spec=spec)` and `MegaPatch(thing=thing)` so that type inference
-  works best.
-- Mock lacks static type inference while MegaMock provides unions
-  of the `MegaMock` object and the object used as a spec.
-
-
-# Debugging tools
-In addition to mocking capability, `MegaMock` objects can also help
-you debug. The `attr_assignments` dictionary, found under the `megamock`
-attribute in `MegaMock` objects, keep a record of what attributes
-were assigned, when, and what the value was. This object is a dictionary
-where the key is the attribute name, and the value is a list of
-`AttributeAssignment` objects.
-
-There is also `spied_access`, which is similar, but for
-objects that are spied.
-
-As mentioned earlier in the readme, `Mega.last_assertion_error` can
-be used to access the assertion error thrown by mock.
-
-If an attribute is coming out of a complex branch of logic with a value
-you do not expect, you can check out these attributes in the debugger
-and get an idea of where things are going wrong.
-
-To easily view the stacktrace in the IDE, there's a special property,
-`top_of_stacktrace`
-
-![Top of Stack](docs/img/top-of-stack.png)
 
 # Congrats on Reading This Far! Here's an Art Gallery!
 
