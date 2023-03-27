@@ -3,6 +3,7 @@ from functools import cached_property
 import inspect
 import logging
 import sys
+from types import ModuleType
 from typing import Any, Generic, TypeVar, cast
 from unittest import mock
 from varname import argname  # type: ignore
@@ -48,18 +49,22 @@ class MegaPatch(Generic[T, U]):
     __reserved_names = {"_patches", "_thing", "_path", "_mocked_value", "_return_value"}
     _active_patches: set[MegaPatch] = set()
 
+    default_mocker: ModuleType | object = mock
+
     def __init__(
         self,
         thing: Any,
         patches: list[mock._patch],
         new_value: MegaMock | Any,
         return_value: Any,
+        mocker: ModuleType | object
         # _merged_type: type[U] | None = None,
     ) -> None:
         self._patches = patches
         self._thing: Any | None = thing
         self._new_value: MegaMock = new_value
         self._return_value = return_value
+        self._mocker = mocker
 
     @property
     def patches(self) -> list[mock._patch]:
@@ -89,13 +94,21 @@ class MegaPatch(Generic[T, U]):
         return cast(MegaMock[T, U], self._return_value)
 
     def start(self) -> None:
-        for patch in self._patches:
-            patch.start()
+        # support for pytest-mock and similar
+        if not hasattr(self._mocker, "stopall"):
+            # built-in mock
+            for patch in self._patches:
+                patch.start()
         MegaPatch._active_patches.add(self)
 
     def stop(self) -> None:
-        for patch in self._patches:
-            patch.stop()
+        # support for pytest-mock and similar
+        if hasattr(self._mocker, "stopall"):
+            self._mocker.stopall()
+        else:
+            # built-in mock
+            for patch in self._patches:
+                patch.stop()
         MegaPatch._active_patches.remove(self)
 
     @staticmethod
@@ -135,7 +148,7 @@ class MegaPatch(Generic[T, U]):
         spec_set: bool = True,
         behavior: MegaPatchBehavior | None = None,
         autostart: bool = True,
-        mocker: object | None = None,
+        mocker: ModuleType | object | None = None,
         **kwargs: Any,
     ):
         """
@@ -149,11 +162,18 @@ class MegaPatch(Generic[T, U]):
         :param mocker: The object to use for patching. If None, then use the default
         """
         if mocker is None:
-            mocker = mock
+            mocker = MegaPatch.default_mocker
         else:
             assert hasattr(
                 mocker, "patch"
             ), "mocker does not appear to be a Mocker object"
+
+        if autostart is False and not hasattr(mocker.patch, "start"):
+            logger.warning(
+                "Disabling autostart doesn't appear to be supported by mocker. "
+                "Falling back to built in mock"
+            )
+            mocker = mock
 
         if behavior is None:
             behavior = MegaPatchBehavior.for_thing(thing)
@@ -177,7 +197,9 @@ class MegaPatch(Generic[T, U]):
             mocker, module_path, passed_in_name, new, kwargs
         )
 
-        mega_patch = MegaPatch[T, type[MegaMock | T]](thing, patches, new, return_value)
+        mega_patch = MegaPatch[T, type[MegaMock | T]](
+            thing, patches, new, return_value, mocker
+        )
         if autostart:
             mega_patch.start()
         return mega_patch
