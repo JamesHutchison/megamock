@@ -170,7 +170,8 @@ class MegaPatch(Generic[T, U]):
 
         if autostart is False and not hasattr(mocker.patch, "start"):
             logger.warning(
-                "Disabling autostart doesn't appear to be supported by mocker. Falling back to built in mock"
+                "Disabling autostart doesn't appear to be supported by mocker. "
+                "Falling back to built in mock"
             )
             mocker = mock
 

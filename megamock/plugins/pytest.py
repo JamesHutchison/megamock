@@ -27,7 +27,7 @@ def stop_all_megapatches(request) -> None:
 
 # swap out default mocker if pytest-mock is installed
 try:
-    from pytest_mock import MockerFixture  # noqa # test for install
+    from pytest_mock import MockerFixture  # type: ignore  # noqa  # test for install
 
     @pytest.fixture(autouse=True, scope="session")
     def use_pytest_mocker(session_mocker: MockerFixture) -> None:
