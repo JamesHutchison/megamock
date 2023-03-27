@@ -115,7 +115,7 @@ addopts = "-p megamock.plugins.pytest"
 ```
 
 The pytest plugin also automatically stops `MegaPatch`es after each test. To disable this behavior, pass in the `--do_not_autostop_megapatches`
-command line argument.
+command line argument. If `pytest-mock` is installed, the default mocker will be switched to the `pytest-mock` `mocker`.
 
 -------------------
 
