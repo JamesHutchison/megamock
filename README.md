@@ -5,9 +5,15 @@ Pew pew! Sane defaults for mocking behavior! Patch objects, variables, attribute
 Supported Python Versions: 3.10+
 ### Installation
 
-pip: `pip install megamock`
+Pip installation:
+```
+pip install megamock
+```
 
-[poetry](https://python-poetry.org/) (as a development dependency): `poetry add megamock --group=dev`
+[poetry](https://python-poetry.org/) (as a development dependency):
+```
+poetry add megamock --group=dev
+```
 
 # Why Use MegaMock? (short version)
 MegaMock is a library that provides a better interface for mocking and patching in Python. Its version
@@ -95,12 +101,9 @@ def test_something(...):
 
 ## Documentation
 
-### Usage
+### Usage (pytest)
 
-Import and execution order is important for MegaMock. When running tests, you will need to execute the `start_import_mod`
-function prior to importing any production or test code. You will also want it so the loader is not used in production.
-
-With `pytest`, this is easily done by using the included pytest plugin. You can use it by adding `-p megamock.plugins.pytest`
+With [pytest](https://pytest.org), MegaMock is easily leveraged by using the included pytest plugin. You can use it by adding `-p megamock.plugins.pytest`
 to the command line.
 
 Command line example:
@@ -117,11 +120,16 @@ addopts = "-p megamock.plugins.pytest"
 The pytest plugin also automatically stops `MegaPatch`es after each test. To disable this behavior, pass in the `--do_not_autostop_megapatches`
 command line argument. If `pytest-mock` is installed, the default mocker will be switched to the `pytest-mock` `mocker`.
 
+### Usage (other test frameworks)
+
+If you're not using the pytest plugin, import and execution order is important for MegaMock. When running tests, you will need to execute the `start_import_mod`
+function prior to importing any production or test code. You will also want it so the loader is not used in production.
+
 -------------------
 
 **Core Classes**
 
-`MegaMock` - the primary class for a mocked object. This is similar to `MagicMock`. Use `MegaMock.it(MyObject)` to make `MyObject` the spec.
+`MegaMock` - the primary class for a mocked object. This is similar to `MagicMock`. Use `MegaMock.it(MyObject)` to make `MyObject` the [spec](https://docs.python.org/3/library/unittest.mock.html#unittest.mock.create_autospec).
 
 `MegaPatch` - the class for patching. This is similar to `patch`. Use `MegaPath.it(MyObject)` to replace new instances of the `MyObject` class.
 
@@ -186,7 +194,7 @@ Creating a mock class itself:
 mock_class = MegaMock.it(MyClass, instance=False)
 ```
 
-Spying an object, then checking about it:
+Spying an object:
 
 ```python
 my_thing = MyClass()
@@ -229,7 +237,7 @@ mock_patch.megainstance.return_value
 Patching a class attribute:
 
 ```python
-# temporarily update the hard coded default max retries to 0
+# temporarily update the max retries to 0
 mega_patch = MegaPatch.it(MyClass.max_retries, new=0)
 ```
 

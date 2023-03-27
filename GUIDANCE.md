@@ -279,7 +279,7 @@ Use `megainstance` to go from a mock class to the mock instance. This is typical
 create a mock instance of a passed in class, but you can change
 this behavior by setting `instance=False` when creating the mock.
 
-This library was written with a leaning towards `pytest`, which is a popular testing library. See [usage](README.md#usage) in
+This library was written with a leaning towards `pytest`, which is a popular testing library. See [usage](README.md#usage-pytest) in
 the readme for more information about using the pytest plugin that comes with the library.
 
 # Behavior differences from `mock`
