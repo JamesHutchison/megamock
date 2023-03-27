@@ -1,4 +1,4 @@
-from typing import Any, Callable, Literal, Sequence, cast
+from typing import Callable, Sequence, cast
 
 from megamock.megamocks import MegaMock, UseRealLogic
 from megamock.type_util import Call
