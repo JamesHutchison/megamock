@@ -87,10 +87,9 @@ class TestMegaMock:
 
     def test_assigning_return_value(self) -> None:
         mega_mock = MegaMock.it(Foo)
-        Mega(mega_mock.megacast.some_method).set_return_value("foo")
+        mega_mock.some_method.return_value = "foo"
 
         assert mega_mock.some_method() == "foo"
-        assert mega_mock.megacast.some_method() == "foo"
 
     def test_allows_for_setting_different_type(self) -> None:
         mega_mock: Foo = MegaMock.it(Foo)  # mypy should not care
@@ -313,7 +312,7 @@ class TestMegaMock:
             )
 
         def test_supports_megacast(self) -> None:
-            assert self.mega_mock.megacast.some_method() == "value"
+            assert self.mega_mock.some_method() == "value"
 
     class TestAsyncMock:
         async def test_async_mock_basics(self) -> None:
@@ -430,29 +429,29 @@ class TestMegaMock:
         def test_function_call_on_cast_object(self) -> None:
             mega_mock = MegaMock.it(Foo("s"))
             mega_mock.moo = "fox"
-            Mega(mega_mock.megacast.what_moos).use_real_logic()
+            Mega(mega_mock.what_moos).use_real_logic()
 
-            assert mega_mock.megacast.what_moos() == "The fox moos"
+            assert mega_mock.what_moos() == "The fox moos"
 
     class TestMegaCast:
         def test_cast_types_to_the_spec_with_type(self) -> None:
             mega_mock = MegaMock.it(Foo)
             mega_mock.z = "z"
 
-            assert mega_mock.megacast.z == "z"
+            assert mega_mock.z == "z"
 
         def test_cast_types_to_the_spec_with_instance(self) -> None:
             mega_mock = MegaMock.it(Foo("s"))
             mega_mock.z = "z"
 
-            assert mega_mock.megacast.z == "z"
+            assert mega_mock.z == "z"
 
         def test_using_function(self) -> None:
             def some_func(val: str) -> str:
                 return val
 
             mega_mock = MegaMock.it(some_func)
-            mega_mock.megacast.__module__  # should have no mypy errors
+            mega_mock.__module__  # should have no mypy errors
 
     class TestMegaInstance:
         def test_using_class(self) -> None:

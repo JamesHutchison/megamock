@@ -248,10 +248,6 @@ class _MegaMockMixin(Generic[T, U]):
         self._wrapped_legacy_mock = megamock_attrs._wrapped_mock
 
     @property
-    def megacast(self) -> U:
-        return cast(U, self)
-
-    @property
     def megainstance(self) -> U:
         """
         Access the instance of a class mock.
@@ -401,6 +397,14 @@ class _MegaMockMixin(Generic[T, U]):
 
 
 class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
+    """
+    The primary MegaMock class. Use MegaMock.it if providing a spec,
+    spy, or wraps argument to ensure that type inference works correctly.
+
+    Instead of: MegaMock(spec=MySpecClass)
+    Use: MegaMock.it(MySpecClass)
+    """
+
     # Types MegaMock()
     @overload
     def __init__(self: MegaMock[None, None]) -> None:
@@ -410,8 +414,8 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     @overload
     def __init__(
         self: _MegaMockMixin[T, U],
-        spec: type[T],
         *,
+        spec: type[T],
         instance: Literal[False] = False,
         side_effect: Any = None,
         return_value: Any = MISSING,
@@ -434,8 +438,8 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     @overload
     def __init__(
         self: _MegaMockMixin[T, U],
-        spec: T,
         *,
+        spec: T,
         _wraps_mock: (
             mock.Mock
             | mock.MagicMock
@@ -479,8 +483,8 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
 
     def __init__(
         self,
-        spec: T | type[T] | None = None,
         *,
+        spec: T | type[T] | None = None,
         wraps: T | None = None,
         spy: T | None = None,
         spec_set: bool = True,
@@ -557,7 +561,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
 
         return helper(
             MegaMock(
-                spec,
+                spec=spec,
                 wraps=wraps,
                 spy=spy,
                 spec_set=spec_set,
