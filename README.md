@@ -18,7 +18,8 @@ poetry add megamock --group=dev
 # Why Use MegaMock? (short version)
 MegaMock is a library that provides a better interface for mocking and patching in Python. Its version
 of patch doesn't have any gotchas based on how you import something, and it also automatically
-creates mocks using best practices. Additionally, the mocks have helpers to cast to the mocked type, allowing you to leverage your IDE's autocomplete.
+creates mocks using best practices. Additionally, the generated mock types are unions of the mocked object
+and `MegaMock`, allowing you to better leverage your IDE's autocomplete.
 
 ![Sample MegaMock vs Mock Comparison](docs/img/megamock-example.gif)
 
