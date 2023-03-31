@@ -4,7 +4,7 @@ import inspect
 import logging
 import sys
 from types import ModuleType
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Callable, Generic, TypeVar, cast
 from unittest import mock
 from varname import argname  # type: ignore
 
@@ -150,6 +150,7 @@ class MegaPatch(Generic[T, U]):
         behavior: MegaPatchBehavior | None = None,
         autostart: bool = True,
         mocker: ModuleType | object | None = None,
+        new_callable: Callable | None = None,
         **kwargs: Any,
     ):
         """
@@ -161,6 +162,10 @@ class MegaPatch(Generic[T, U]):
         :param behavior: The behavior to use when mocking
         :param autostart: If true, then start the patch immediately
         :param mocker: The object to use for patching. If None, then use the default
+        :param new_callable: A callable function or object that returns the replacement
+            object to return. This is usually some replacement Mock bject.
+            This is mainly for legacy support and is not recommended since it can't be
+            combined with autospec.
         """
         if mocker is None:
             mocker = MegaPatch.default_mocker
@@ -178,11 +183,17 @@ class MegaPatch(Generic[T, U]):
 
         if behavior is None:
             behavior = MegaPatchBehavior.for_thing(thing)
-        if (autospec := kwargs.pop("autospec", None)) in (True, False):
-            behavior.autospec = autospec
-        new, return_value = MegaPatch._new_return_value(
-            thing, spec_set, new, kwargs, behavior
-        )
+        if new_callable is not None:
+            if new is None:
+                new = mock.DEFAULT
+            return_value = kwargs.get("return_value")
+            kwargs["new_callable"] = new_callable
+        else:
+            if (autospec := kwargs.pop("autospec", None)) in (True, False):
+                behavior.autospec = autospec
+            new, return_value = MegaPatch._new_return_value(
+                thing, spec_set, new, kwargs, behavior
+            )
 
         if isinstance(thing, _MegaMockMixin):
             assert thing.megamock.spec is not None

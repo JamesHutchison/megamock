@@ -1,3 +1,4 @@
+from unittest import mock
 import pytest
 from megamock import MegaPatch
 from megamock.megamocks import UseRealLogic
@@ -235,3 +236,34 @@ class TestGotchaCheck:
     def test_raises_value_error_if_autospec_and_use_real_logic(self) -> None:
         with pytest.raises(ValueError):
             MegaPatch.it(Foo, autospec=True, return_value=UseRealLogic)
+
+
+class TestNewCallable:
+    def test_new_callable(self) -> None:
+        def foo() -> str:
+            return "foo"
+
+        MegaPatch.it(Foo, new_callable=foo)
+
+        assert Foo == "foo"
+
+    def test_combining_new_and_new_callable(self) -> None:
+        with pytest.raises(ValueError) as exc:
+            MegaPatch.it(Foo, new="hi", new_callable=mock.Mock)
+
+        assert str(exc.value) == "Cannot use 'new' and 'new_callable' together"
+
+    def test_combining_return_value_and_new_callable(self) -> None:
+        # return_value is passed in as an argument to the new callable
+        mega_patch = MegaPatch.it(Foo, return_value="val", new_callable=mock.Mock)
+
+        # wart from unittest.mock - new_callable can't be combined with autospec
+        assert Foo() == "val"  # type: ignore
+
+        assert mega_patch.return_value == "val"
+
+    def test_combining_autospec_and_new_callable(self) -> None:
+        with pytest.raises(ValueError) as exc:
+            MegaPatch.it(Foo, autospec=True, new_callable=mock.Mock)
+
+        assert str(exc.value) == "Cannot use 'autospec' and 'new_callable' together"
