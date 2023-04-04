@@ -1,20 +1,23 @@
 from unittest import mock
+
 import pytest
+
 from megamock import MegaPatch
 from megamock.megamocks import UseRealLogic
 from megamock.megapatches import MegaMock
 from megamock.megas import Mega
-from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
-from tests.simple_app.bar import some_context_manager, some_func, Bar
-from tests.simple_app.foo import Foo, bar, foo_instance
-from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app import foo
+from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
+from tests.simple_app.bar import Bar, some_context_manager, some_func
+from tests.simple_app.foo import Foo
+from tests.simple_app.foo import Foo as OtherFoo
+from tests.simple_app.foo import bar, foo_instance
 from tests.simple_app.helpful_manager import HelpfulManager
 from tests.simple_app.locks import SomeLock
 from tests.simple_app.nested_classes import NestedParent
 from tests.simple_app.uses_nested_classes import (
-    get_nested_class_function_value,
     get_nested_class_attribute_value,
+    get_nested_class_function_value,
 )
 
 

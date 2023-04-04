@@ -1,6 +1,6 @@
 import asyncio
-from contextlib import contextmanager
 import inspect
+from contextlib import contextmanager
 from typing import Generator, cast
 from unittest import mock
 

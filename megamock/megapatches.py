@@ -1,15 +1,17 @@
 from __future__ import annotations
-from functools import cached_property
+
 import inspect
 import logging
 import sys
+from functools import cached_property
 from types import ModuleType
 from typing import Any, Callable, Generic, TypeVar, cast
 from unittest import mock
+
 from varname import argname  # type: ignore
 
 from megamock.import_references import References
-from megamock.megamocks import _MegaMockMixin, _UseRealLogic, MegaMock
+from megamock.megamocks import MegaMock, _MegaMockMixin, _UseRealLogic
 
 logger = logging.getLogger(__name__)
 

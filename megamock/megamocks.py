@@ -1,26 +1,17 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
 import re
 import time
 import traceback
 from abc import ABCMeta
 from collections import defaultdict
+from dataclasses import dataclass, field
 from inspect import isawaitable, isclass, iscoroutinefunction
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import Any, Callable, Generic, Literal, TypeVar, cast, overload
 from unittest import mock
 
-from megamock.type_util import MISSING_TYPE, MISSING
-
+from megamock.type_util import MISSING, MISSING_TYPE
 
 T = TypeVar("T")
 U = TypeVar("U")

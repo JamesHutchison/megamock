@@ -36,3 +36,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 addopts = "-p megamock.plugins.pytest"
 asyncio_mode = "auto"
+
+[tool.isort]
+profile = "black"
