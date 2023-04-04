@@ -11,7 +11,6 @@ from inspect import isawaitable, isclass, iscoroutinefunction
 from typing import (
     Any,
     Callable,
-    Generator,
     Generic,
     Literal,
     TypeVar,
@@ -227,23 +226,6 @@ class _MegaMockMixin(Generic[T, U]):
                 autospeced_legacy_mock = mock.create_autospec(
                     spec, spec_set=spec_set, instance=instance, **kwargs
                 )
-                # support context manager ("with" statement)
-
-                def enter() -> Generator:
-                    yield self._get_child_mock()
-
-                def exit(exc_type, exc_value, traceback) -> None:
-                    return None
-
-                try:
-                    autospeced_legacy_mock.__enter__ = enter
-                    autospeced_legacy_mock.__exit__ = exit
-                except AttributeError:
-                    pass
-
-                # fix return value thingy
-                autospeced_legacy_mock._mock_delegate = None
-
                 megamock_attrs._wrapped_mock = autospeced_legacy_mock
             else:
                 # not wrapping a Mock object, so do init for super
