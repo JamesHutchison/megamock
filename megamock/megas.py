@@ -30,36 +30,36 @@ class Mega:
             return False
         return True
 
+    @property
+    def _mm(self) -> MegaMock:
+        return cast(MegaMock, self._func)
+
     def called_once_with(self, *args, **kwargs) -> bool:
         """
         Return true if the mock was called exactly once and with the specified
         arguments
         """
         return self._check_mock_assertion(
-            lambda: cast(MegaMock, self._func).assert_called_once_with(*args, **kwargs)
+            lambda: self._mm.assert_called_once_with(*args, **kwargs)
         )
 
     def called_once(self) -> bool:
         """
         Return true if the mock was called exactly once
         """
-        return self._check_mock_assertion(
-            lambda: cast(MegaMock, self._func).assert_called_once()
-        )
+        return self._check_mock_assertion(lambda: self._mm.assert_called_once())
 
     def called(self) -> bool:
         """
         Return true if the mock was called
         """
-        return cast(MegaMock, self._func).called
+        return self._mm.called
 
     def not_called(self) -> bool:
         """
         Return true if the mock was not called
         """
-        return self._check_mock_assertion(
-            lambda: cast(MegaMock, self._func).assert_not_called()
-        )
+        return self._check_mock_assertion(lambda: self._mm.assert_not_called())
 
     def called_with(self, *args, **kwargs) -> bool:
         """
@@ -67,7 +67,7 @@ class Mega:
         arguments
         """
         return self._check_mock_assertion(
-            lambda: cast(MegaMock, self._func).assert_called_with(*args, **kwargs)
+            lambda: self._mm.assert_called_with(*args, **kwargs)
         )
 
     def any_call(self, *args, **kwargs) -> bool:
@@ -76,7 +76,7 @@ class Mega:
         at any point in time
         """
         return self._check_mock_assertion(
-            lambda: cast(MegaMock, self._func).assert_any_call(*args, **kwargs)
+            lambda: self._mm.assert_any_call(*args, **kwargs)
         )
 
     def has_calls(self, calls: Sequence[Call], any_order=False) -> bool:
@@ -88,7 +88,7 @@ class Mega:
         Extra calls are ignored.
         """
         return self._check_mock_assertion(
-            lambda: cast(MegaMock, self._func).assert_has_calls(calls, any_order)
+            lambda: self._mm.assert_has_calls(calls, any_order)
         )
 
     @property
@@ -96,24 +96,24 @@ class Mega:
         """
         Return the last call made to the mock
         """
-        return cast(MegaMock, self._func).call_args
+        return self._mm.call_args
 
     @property
     def call_args_list(self) -> list[Call]:
         """
         Return the list of all calls made to the mock
         """
-        return cast(MegaMock, self._func).call_args_list
+        return self._mm.call_args_list
 
     @property
     def call_count(self) -> int:
         """
         Return the number of times the mock was called
         """
-        return cast(MegaMock, self._func).call_count
+        return self._mm.call_count
 
     def use_real_logic(self) -> None:
         """
         Helper function to have a MegaMock object use the real logic
         """
-        cast(MegaMock, self._func).return_value = UseRealLogic
+        self._mm.return_value = UseRealLogic

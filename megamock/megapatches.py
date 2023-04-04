@@ -94,6 +94,34 @@ class MegaPatch(Generic[T, U]):
     def return_value(self) -> MegaMock[T, U]:
         return cast(MegaMock[T, U], self._return_value)
 
+    def set_context_manager_return_value(self, new_return_value: Any) -> None:
+        """
+        Use to modify the result of entering a context manager
+
+        megapatch = MegaPatch.it(my_context_manager)
+        megapatch.set_context_manager_return_value("foo")
+
+        with my_context_manager() as val:
+            assert val == "foo"
+        """
+        self.return_value.__enter__.return_value = new_return_value  # type: ignore
+
+    def set_context_manager_side_effect(self, new_side_effect: Any) -> None:
+        """
+        Use to set the side effect of a context manager. As with
+        normal side-effect usage, an exception will result in it being raised,
+        and an iterable will change the result on subsequent calls
+        """
+        self.return_value.__enter__.side_effect = new_side_effect  # type: ignore
+
+    def set_context_manager_exit_side_effect(self, new_side_effect: Any) -> None:
+        """
+        Use to set the side effect of a context manager. As with
+        normal side-effect usage, an exception will result in it being raised,
+        and an iterable will change the result on subsequent calls
+        """
+        self.return_value.__exit__.side_effect = new_side_effect  # type: ignore
+
     def start(self) -> None:
         # support for pytest-mock and similar
         if not hasattr(self._mocker, "stopall"):

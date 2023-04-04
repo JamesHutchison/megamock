@@ -282,6 +282,62 @@ this behavior by setting `instance=False` when creating the mock.
 This library was written with a leaning towards `pytest`, which is a popular testing library. See [usage](README.md#usage-pytest) in
 the readme for more information about using the pytest plugin that comes with the library.
 
+# Advanced Use Cases
+You can mock a context manager. This is typically done through `MegaPatch.it` rather than passing around context managers as args.
+The preferred way of altering the context manager behavior is through the `set_context_manager...` `MegaPatch` methods.
+
+Setting a return value:
+```python
+megapatch = MegaPatch.it(some_context_manager)
+megapatch.set_context_manager_return_value("foo")
+
+with some_context_manager() as val:
+    assert val == "foo"
+```
+
+Setting a side-effect on entering:
+```python
+megapatch.set_context_manager_side_effect([1, 2])
+```
+
+Setting a side-effect on exiting:
+```python
+megapatch.set_context_manager_exit_side_effect(Exception("Error on file close"))
+```
+
+If for some reason you do want to deal with a `MegaMock` object directly, you will want to use the `return_value`
+of the context manager and alter the `__enter__` or `__exit__` mock functions
+
+```python
+mock = MegaMock()
+mock.return_value.__enter__.return_value = "some val"
+mock.return_value.__exit__.side_effect = Exception("Error on file close!")
+
+with pytest.raises(Exception) as exc:
+    with mock() as val:
+        assert val == "some val"
+
+assert str(exc.value) == "Error on file close!"
+```
+
+One final note with context managers created from generators - they are not intended
+to be used multiple times. This won't work:
+
+```python
+
+@contextlib.contextmanager
+def my_context_manager():
+    yield "something"
+
+manager = my_context_manager()
+
+with manager:
+    pass
+
+with manager:
+    pass
+```
+
 # Behavior differences from `mock`
 - Using `MegaMock` is like using the `mock.create_autospec()` function
   - This means a `MegaMock` object may support `async` functionality if the mocked object is async.

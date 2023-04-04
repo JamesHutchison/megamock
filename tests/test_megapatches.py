@@ -5,7 +5,7 @@ from megamock.megamocks import UseRealLogic
 from megamock.megapatches import MegaMock
 from megamock.megas import Mega
 from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
-from tests.simple_app.bar import some_func, Bar
+from tests.simple_app.bar import some_context_manager, some_func, Bar
 from tests.simple_app.foo import Foo, bar, foo_instance
 from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app import foo
@@ -267,3 +267,52 @@ class TestNewCallable:
             MegaPatch.it(Foo, autospec=True, new_callable=mock.Mock)
 
         assert str(exc.value) == "Cannot use 'autospec' and 'new_callable' together"
+
+
+class TestMegaPatchContextManagerFromGenerator:
+    def test_patch_context_manager(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_return_value("foo")
+
+        with some_context_manager():
+            pass
+
+    def test_set_return_value(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_return_value("foo")
+
+        with some_context_manager() as val:
+            assert val == "foo"
+
+    def test_set_side_effect_exception(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_side_effect(Exception("boo!"))
+
+        with pytest.raises(Exception):
+            with some_context_manager():
+                pass
+
+    def test_set_side_effect_iterable(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_side_effect([1, 2])
+
+        with some_context_manager() as first_val:
+            pass
+        with some_context_manager() as second_val:
+            pass
+
+        assert [first_val, second_val] == [1, 2]
+
+    def test_set_exit_side_effect(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_exit_side_effect(Exception("Error on file close"))
+
+        with pytest.raises(Exception) as exc:
+            with some_context_manager():
+                pass
+
+        assert str(exc.value) == "Error on file close"
+
+
+class TestMegaPatchContextManagerClass:
+    pass  # TODO
