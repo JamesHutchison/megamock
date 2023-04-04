@@ -32,6 +32,9 @@ class Mega:
 
     @property
     def _mm(self) -> MegaMock:
+        """
+        Property to shorthand the cast to MegaMock
+        """
         return cast(MegaMock, self._func)
 
     def called_once_with(self, *args, **kwargs) -> bool:
