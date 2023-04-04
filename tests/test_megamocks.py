@@ -1,6 +1,7 @@
 import asyncio
 import inspect
-from typing import cast
+from contextlib import contextmanager
+from typing import Generator, cast
 from unittest import mock
 
 import pytest
@@ -480,3 +481,73 @@ class TestMegaMock:
             mega_mock = MegaMock.it(Foo, instance=False)
 
             mega_mock.megainstance.some_method()
+
+    class TestMockingContextManager:
+        @pytest.fixture(autouse=True)
+        def setup(self) -> None:
+            self.before = False
+            self.after = False
+
+            # a test context manager
+            @contextmanager
+            def my_context_manager() -> Generator:
+                self.before = True
+                yield "foo"
+                self.after = True
+
+            self.context_manager = my_context_manager
+
+        def test_preconditions(self) -> None:
+            # not a real test
+            # just ensure the tests are set up correctly
+
+            assert self.before is False
+
+            with self.context_manager() as value:
+                assert self.before is True
+                assert value == "foo"
+                assert self.after is False
+
+            assert self.after is True
+
+        def test_mocking_context_manager(self) -> None:
+            mega_mock = MegaMock.it(self.context_manager)
+            mega_mock.return_value.return_value = "mocked"
+
+            with mega_mock() as val:
+                assert val == "mocked"
+
+            assert self.before is False
+            assert self.after is False
+
+        def test_use_real_logic(self) -> None:
+            mega_mock = MegaMock.it(self.context_manager())
+
+            Mega(mega_mock).use_real_logic()
+
+            with mega_mock as val:
+                assert val == "foo"
+
+            assert self.after is True
+
+        def test_attempting_to_use_non_contextmanager(self) -> None:
+            mega_mock = MegaMock.it(Foo)
+
+            with pytest.raises(TypeError) as exc:
+                with mega_mock:
+                    pass
+
+            assert (
+                str(exc.value)
+                == "'Foo' object does not support the context manager protocol"
+            )
+
+        def test_no_spec_supports_context_manager(self) -> None:
+            with MegaMock():
+                pass
+
+        def test_spy_supports_context_manager(self) -> None:
+            mega_mock = MegaMock.it(spy=self.context_manager())
+
+            with mega_mock as val:
+                assert val == "foo"

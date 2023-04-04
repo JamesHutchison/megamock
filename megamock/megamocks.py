@@ -1,26 +1,17 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
 import re
 import time
 import traceback
 from abc import ABCMeta
 from collections import defaultdict
+from dataclasses import dataclass, field
 from inspect import isawaitable, isclass, iscoroutinefunction
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import Any, Callable, Generic, Literal, TypeVar, cast, overload
 from unittest import mock
 
-from megamock.type_util import MISSING_TYPE, MISSING
-
+from megamock.type_util import MISSING, MISSING_TYPE
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -395,6 +386,34 @@ class _MegaMockMixin(Generic[T, U]):
         # or if the child that called this method cannot be located
         return None
 
+    def __enter__(self) -> U:
+        if self.megamock.wraps is not None:
+            return self.megamock.wraps.__enter__()
+        try:
+            if self.using_real_logic():
+                return self.megamock.spec.__enter__()  # type: ignore
+            return self.__getattr__("__enter__")
+        except AttributeError:
+            if hasattr(self.megamock.spec, "__name__"):
+                name_str = f"'{self.megamock.spec.__name__}' "  # type: ignore
+            else:
+                name_str = ""
+            raise TypeError(
+                f"{name_str}object does not support the context manager protocol"
+            )
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.megamock.wraps is not None:
+            self.megamock.wraps.__exit__(exc_type, exc_value, traceback)
+        if self.using_real_logic():
+            return self.megamock.spec.__exit__(exc_type, exc_value, traceback)
+        return self.__getattr__("__exit__")
+
+    def using_real_logic(self) -> bool:
+        return (
+            self._wrapped_legacy_mock.__dict__.get("_mock_return_value") is UseRealLogic
+        )
+
 
 class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     """
@@ -614,7 +633,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             # return_value object and use that
             # TODO: both the megamock and wrapped mock have return values
             #       and they're both importnat, we're not just looking at one.
-            if wrapped.__dict__.get("_mock_return_value") is UseRealLogic:
+            if self.using_real_logic():
                 if not (spec := self.megamock.spec):
                     spec = self._get_spec_from_parents()
                     if not spec:

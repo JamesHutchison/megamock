@@ -1,19 +1,23 @@
 from unittest import mock
+
 import pytest
+
 from megamock import MegaPatch
 from megamock.megamocks import UseRealLogic
 from megamock.megapatches import MegaMock
 from megamock.megas import Mega
-from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
-from tests.simple_app.bar import some_func, Bar
-from tests.simple_app.foo import Foo, bar, foo_instance
-from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app import foo
+from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
+from tests.simple_app.bar import Bar, some_context_manager, some_func
+from tests.simple_app.foo import Foo
+from tests.simple_app.foo import Foo as OtherFoo
+from tests.simple_app.foo import bar, foo_instance
 from tests.simple_app.helpful_manager import HelpfulManager
+from tests.simple_app.locks import SomeLock
 from tests.simple_app.nested_classes import NestedParent
 from tests.simple_app.uses_nested_classes import (
-    get_nested_class_function_value,
     get_nested_class_attribute_value,
+    get_nested_class_function_value,
 )
 
 
@@ -267,3 +271,77 @@ class TestNewCallable:
             MegaPatch.it(Foo, autospec=True, new_callable=mock.Mock)
 
         assert str(exc.value) == "Cannot use 'autospec' and 'new_callable' together"
+
+
+class TestMegaPatchContextManager:
+    def test_patch_context_manager(self) -> None:
+        MegaPatch.it(some_context_manager)
+
+        with some_context_manager():
+            pass
+
+    def test_set_return_value(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_return_value("foo")
+
+        with some_context_manager() as val:
+            assert val == "foo"
+
+    def test_set_side_effect_exception(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_side_effect(Exception())
+
+        with pytest.raises(Exception):
+            with some_context_manager():
+                pass
+
+    def test_set_side_effect_iterable(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_side_effect([1, 2])
+
+        with some_context_manager() as first_val:
+            pass
+        with some_context_manager() as second_val:
+            pass
+
+        assert [first_val, second_val] == [1, 2]
+
+    def test_set_exit_side_effect(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_exit_side_effect(Exception("Error on file close"))
+
+        with pytest.raises(Exception) as exc:
+            with some_context_manager():
+                pass
+
+        assert str(exc.value) == "Error on file close"
+
+    def test_using_class(self) -> None:
+        lock = SomeLock()
+
+        # check precondition, should raise exception
+        with pytest.raises(Exception):
+            with lock:
+                with lock:
+                    pass
+
+        MegaPatch.it(SomeLock)
+
+        lock = SomeLock()
+
+        # since logic is mocked out, should not raise
+        with lock:
+            with lock:
+                pass
+
+    def test_setting_return_value_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_return_value("foo")
+
+    def test_setting_side_effect_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_side_effect(Exception())
+
+    def test_setting_exit_side_effect_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_exit_side_effect(Exception())

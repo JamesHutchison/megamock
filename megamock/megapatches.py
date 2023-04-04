@@ -1,15 +1,17 @@
 from __future__ import annotations
-from functools import cached_property
+
 import inspect
 import logging
 import sys
+from functools import cached_property
 from types import ModuleType
 from typing import Any, Callable, Generic, TypeVar, cast
 from unittest import mock
+
 from varname import argname  # type: ignore
 
 from megamock.import_references import References
-from megamock.megamocks import _MegaMockMixin, _UseRealLogic, MegaMock
+from megamock.megamocks import MegaMock, _MegaMockMixin, _UseRealLogic
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +95,43 @@ class MegaPatch(Generic[T, U]):
     @property
     def return_value(self) -> MegaMock[T, U]:
         return cast(MegaMock[T, U], self._return_value)
+
+    def set_context_manager_return_value(self, new_return_value: Any) -> None:
+        """
+        Use to modify the result of entering a context manager
+
+        megapatch = MegaPatch.it(my_context_manager)
+        megapatch.set_context_manager_return_value("foo")
+
+        with my_context_manager() as val:
+            assert val == "foo"
+        """
+        try:
+            self.return_value.__enter__.return_value = new_return_value  # type: ignore
+        except AttributeError:
+            raise ValueError("Not a context manager")
+
+    def set_context_manager_side_effect(self, new_side_effect: Any) -> None:
+        """
+        Use to set the side effect when entering the context manager. As with
+        normal side-effect usage, an exception will result in it being raised,
+        and an iterable will change the result on subsequent calls
+        """
+        try:
+            self.return_value.__enter__.side_effect = new_side_effect  # type: ignore
+        except AttributeError:
+            raise ValueError("Not a context manager")
+
+    def set_context_manager_exit_side_effect(self, new_side_effect: Any) -> None:
+        """
+        Use to set the side effect when exiting the context manager. As with
+        normal side-effect usage, an exception will result in it being raised,
+        and an iterable will change the result on subsequent calls
+        """
+        try:
+            self.return_value.__exit__.side_effect = new_side_effect  # type: ignore
+        except AttributeError:
+            raise ValueError("Not a context manager")
 
     def start(self) -> None:
         # support for pytest-mock and similar
