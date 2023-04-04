@@ -45,6 +45,9 @@ class A:
         # ... do something with response ...
 ```
 
+The alternative to mocking and patching objects is to create a more complex class structure, where
+the real implementation and the fake implementation as subclasses of a common base class.
+
 Swapping everything with replaceable parts can lead to complexity, increasing cognitive load for
 developers. They must understand the function's purpose, identify production classes, and map
 the business domain to presented classes. Developers may struggle with code navigation, as they need
@@ -54,19 +57,18 @@ harder to understand and navigate.
 It's better to have a simple interface that mirrors the business domain as much possible, and only
 introduce complexities where it is necessary.
 
-Mocking also saves you time by allowing more leeway when writing code. You can quickly write code
-as you find it intuitive, like writing a rough draft of a document, and cheaply write unit tests
-against it. You can then refactor the code later if needed.
+Mocking and using the patch functionality also saves you time by allowing more leeway when writing
+code. You can quickly write code as you find it intuitive, like writing a rough draft of a document,
+and cheaply write unit tests against it. You can then refactor the code later if needed.
 
 ## Why MegaMock?
 
 Even seasoned Python developers are frequently bit by the built-in mock framework. One very nasty
 gotcha is found in the `patch` function. It's very easy to accidentally patch in the wrong location.
 This stems from the nature that code is often written. A common programming technique to import
-an object is to type
-out the name of the class or function that you want, then press a keyboard shortcut to pull up
+an object is to type out the name of the class or function that you want, then press a keyboard shortcut to pull up
 the quick action menu and have it generate the import. The import is usually, but not always,
-a local import. This can create a divergence when patching an object. In some modules,
+a `from` import. This can create a divergence when patching an object. In some modules,
 you may need to apply the patch on the module where the object was defined. In other modules,
 you would need to apply the patch where it is being used.
 
@@ -80,8 +82,8 @@ this out or at least copying a path reference and swapping the slashes for perio
 
 This is error prone,
 and time consuming. The dot paths are not changed when things are renamed. The calls to patch
-should also include the `autospec=True` argument, which is probably not enabled by default for
-legacy reasons. Finally, `patch`es need to be remembered to be started and stopped.
+should also include the `autospec=True` argument, which isn't default behavior, when it should be.
+Finally, `patch`es need to be remembered to be started and stopped.
 
 ```python
 # many patch strings may extend so long they need to be split into multiple lines
@@ -139,6 +141,7 @@ mock = mock.MagicMock(spec=SomeClass)
 ```
 
 but actually, this is still wrong. There's still behaviors that are not properly reflected in the mock.
+Nested attributes are too broad.
 
 The correct way to do this is to use `create_autospec`:
 
@@ -148,31 +151,20 @@ mock = mock.create_autospec(SomeClass, spec_set=True, instance=True)
 
 Now the mock object will have the same interface as `SomeClass`, will error if an attribute is assigned
 that isn't part of the definition, and it also is mock instance of SomeClass instead of a mock type.
-Likewise, attributes are only callable if they are actually callable.
+Likewise, attributes are only callable if they are actually callable. This also has its own flaws,
+and attempting to get it to do what you want in some cases are non-trivial due to it generating
+callables that are missing attributes you normally expect on `MagicMock` objects.
 
 With MegaMock, doing this is as simple as:
 
 ```python
-mock = MegaMock(SomeClass)
+mock = MegaMock.it(SomeClass)
 ```
 
 Another example where MegaMock can be helpful is when you want to _mostly_ mock out a class.
-This may be a common case in pytest fixtures where the fixture just mocks out the whole class,
-and then you want to selectively enable logic as needed. Using the built-in mock library, you may
-end up with something like this (highly simplified):
+There is no simple way to do this in the built-in mock library.
 
-```python
-real_func = MyClass.some_func
-
-...
-
-with mock.patch("tiring.path.to.the.class.to.mock.out.MyClass", autospec=True) as mock_class:
-    mock_class.some_func = real_func
-
-    do_test_logic(...)
-```
-
-With MegaMock, you can do this instead:
+With MegaMock, you can do this:
 
 ```python
 MegaPatch.it(MyClass)
@@ -186,8 +178,8 @@ do_test_logic(...)
 MegaMock is intended to _replace_ the built in `unittest.mock` library. In many cases it can be
 a drop in replacement.
 
-Do not write "Fake" and "Real" classes if you can avoid it. Instead of write real classes and use mocking
-when fake behavior is needed.
+As mentioned earlier in the guidance, do not write "Fake" and "Real" classes if you can avoid it.
+Instead, write real classes and use mocking when fake behavior is needed.
 
 Keep static typing in mind when writing code, even if you are writing a simple script that you are not
 type checking. While it may be tempting to use strings when the "value to pass around" is a complex object:
@@ -216,11 +208,11 @@ does not shadow another variable. Prefer `patch` for MegaPatch, under the same c
 You should almost always use `MegaPatch.it` instead of `MegaPatch` directly. When creating
 a `MegaMock` object with a spec, use `MegaMock.it(...)`.
 
-Avoid testing the implementation. When you test the implementation, you create a brittle test
-that easily breaks when the implementation changes. It can be very tempting to liberally
-create mocks of almost everything and validate that one slice of the code is properly calling
-another slice, but this should _generally_ be avoided, and should never be the de facto way
-things are tested in your project.
+When writing tests, avoid testing the implementation. When you test the implementation,
+you create a brittle test that easily breaks when the implementation changes.
+It can be very tempting to liberally create mocks of almost everything and validate that one
+slice of the code is properly calling another slice, but this should _generally_ be avoided,
+and should never be the de facto way things are tested in your project.
 
 ```python
 def ive_got_the_power(x):
@@ -230,22 +222,24 @@ def ive_got_the_power(x):
 def test_ive_got_the_power():
     MegaPatch.it("my_module.SOME_CONSTANT", new=2)
 
+    # good, test the public interface gives the desired result
+    assert ive_got_the_power(2) == 4
+
     # bad, if the implementation was changed to use ** instead, this test would fail
     patch = MegaPatch.it(pow, return_value=4)
 
     ive_got_the_power(2)
     assert patch.mock.called_once_with(2, 2)
-
-    # good, test the public interface gives the desired result
-    assert ive_got_the_power(2) == 4
 ```
 
 There are some exceptions. For example, a function may invoke complex inner logic with
 a defined interface contract and you want to verify that it is interacting correctly.
 It can be time saving and also create a faster performing test to treat that inner logic
 as a black box interface you are simply feeding into and reading from.
-In this case, you may want to mock out the inner logic and verify that the outer logic is calling it correctly.
-This only makes sense if the inner logic is already well tested.
+In this case, you may want to mock out the inner logic and verify that the outer logic is
+calling it correctly. This only makes sense if the inner logic is already well tested.
+In this case, you are treating the inner logic like a defined interface contract, and testing
+your interactions with that contract.
 
 ```python
 def get_super_complex_thing_for_today(data_blob):
@@ -268,15 +262,8 @@ def test_that(self) -> None:
     assert Mega(logic_patch.mock).called_once_with(data_blob, date=today)
 ```
 
-`MegaMock` objects keep track of attribute assignments using the `mock.attr_assignments` attribute. This
-is usually not needed, but in some uncommon cases, can be a helpful debugging tool when a mock goes through
-a complex logic path that mutates it and the end result is not what was expected.
-
-Similarly, spied objects have `mock.spied_access` which tracks the name and value of spied members, and their
-access times. If you're not hitting the expected logic paths, this, combined with attr_assignments, can be helpful.
-
-Use `megainstance` to go from a mock class to the mock instance. This is typically used by `MegaPatch`. `MegaMock` will automatically
-create a mock instance of a passed in class, but you can change
+Use `megainstance` to go from a mock class to the mock instance. This is typically used by `MegaPatch`.
+`MegaMock` will automatically create a mock instance of a passed in class, but you can change
 this behavior by setting `instance=False` when creating the mock.
 
 This library was written with a leaning towards `pytest`, which is a popular testing library. See [usage](README.md#usage-pytest) in
