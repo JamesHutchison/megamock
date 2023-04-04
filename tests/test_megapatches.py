@@ -10,6 +10,7 @@ from tests.simple_app.foo import Foo, bar, foo_instance
 from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app import foo
 from tests.simple_app.helpful_manager import HelpfulManager
+from tests.simple_app.locks import SomeLock
 from tests.simple_app.nested_classes import NestedParent
 from tests.simple_app.uses_nested_classes import (
     get_nested_class_function_value,
@@ -269,7 +270,7 @@ class TestNewCallable:
         assert str(exc.value) == "Cannot use 'autospec' and 'new_callable' together"
 
 
-class TestMegaPatchContextManagerFromGenerator:
+class TestMegaPatchContextManager:
     def test_patch_context_manager(self) -> None:
         megapatch = MegaPatch.it(some_context_manager)
         megapatch.set_context_manager_return_value("foo")
@@ -313,6 +314,20 @@ class TestMegaPatchContextManagerFromGenerator:
 
         assert str(exc.value) == "Error on file close"
 
+    def test_using_class(self) -> None:
+        lock = SomeLock()
 
-class TestMegaPatchContextManagerClass:
-    pass  # TODO
+        # check precondition, should raise exception
+        with pytest.raises(Exception):
+            with lock:
+                with lock:
+                    pass
+
+        MegaPatch.it(SomeLock)
+
+        lock = SomeLock()
+
+        # since logic is mocked out, should not raise
+        with lock:
+            with lock:
+                pass
