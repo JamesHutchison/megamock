@@ -104,23 +104,32 @@ class MegaPatch(Generic[T, U]):
         with my_context_manager() as val:
             assert val == "foo"
         """
-        self.return_value.__enter__.return_value = new_return_value  # type: ignore
+        try:
+            self.return_value.__enter__.return_value = new_return_value  # type: ignore
+        except AttributeError:
+            raise ValueError("Not a context manager")
 
     def set_context_manager_side_effect(self, new_side_effect: Any) -> None:
         """
-        Use to set the side effect of a context manager. As with
+        Use to set the side effect when entering the context manager. As with
         normal side-effect usage, an exception will result in it being raised,
         and an iterable will change the result on subsequent calls
         """
-        self.return_value.__enter__.side_effect = new_side_effect  # type: ignore
+        try:
+            self.return_value.__enter__.side_effect = new_side_effect  # type: ignore
+        except AttributeError:
+            raise ValueError("Not a context manager")
 
     def set_context_manager_exit_side_effect(self, new_side_effect: Any) -> None:
         """
-        Use to set the side effect of a context manager. As with
+        Use to set the side effect when exiting the context manager. As with
         normal side-effect usage, an exception will result in it being raised,
         and an iterable will change the result on subsequent calls
         """
-        self.return_value.__exit__.side_effect = new_side_effect  # type: ignore
+        try:
+            self.return_value.__exit__.side_effect = new_side_effect  # type: ignore
+        except AttributeError:
+            raise ValueError("Not a context manager")
 
     def start(self) -> None:
         # support for pytest-mock and similar

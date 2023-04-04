@@ -272,8 +272,7 @@ class TestNewCallable:
 
 class TestMegaPatchContextManager:
     def test_patch_context_manager(self) -> None:
-        megapatch = MegaPatch.it(some_context_manager)
-        megapatch.set_context_manager_return_value("foo")
+        MegaPatch.it(some_context_manager)
 
         with some_context_manager():
             pass
@@ -287,7 +286,7 @@ class TestMegaPatchContextManager:
 
     def test_set_side_effect_exception(self) -> None:
         megapatch = MegaPatch.it(some_context_manager)
-        megapatch.set_context_manager_side_effect(Exception("boo!"))
+        megapatch.set_context_manager_side_effect(Exception())
 
         with pytest.raises(Exception):
             with some_context_manager():
@@ -331,3 +330,15 @@ class TestMegaPatchContextManager:
         with lock:
             with lock:
                 pass
+
+    def test_setting_return_value_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_return_value("foo")
+
+    def test_setting_side_effect_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_side_effect(Exception())
+
+    def test_setting_exit_side_effect_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_exit_side_effect(Exception())
