@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 
-from megamock import MegaMock
+from megamock import MegaMock, name_words
 from megamock.megamocks import (
     AsyncMegaMock,
     AttributeTrackingBase,
@@ -120,6 +120,13 @@ class TestMegaMock:
         callable.return_value = result
 
         assert callable("foo", "bar") is result
+
+    def test_meganame(self) -> None:
+        mega_mock = MegaMock()
+        adjective, noun, number = mega_mock.meganame.split(" ")
+        assert adjective in name_words.ADJECTIVES
+        assert noun in name_words.NOUNS
+        int(number)  # shouldn't error
 
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:

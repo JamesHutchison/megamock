@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import random
 import re
 import time
 import traceback
@@ -11,6 +12,7 @@ from inspect import isawaitable, isclass, iscoroutinefunction
 from typing import Any, Callable, Generic, Literal, TypeVar, cast, overload
 from unittest import mock
 
+from megamock import name_words
 from megamock.type_util import MISSING, MISSING_TYPE
 
 T = TypeVar("T")
@@ -146,6 +148,7 @@ class _MegaMockMixin(Generic[T, U]):
         "return_value",
     }
 
+    meganame: str  # a human friendly name, "<ADJECTIVE> <VERB> <INTEGER>"
     megamock: MegaMockAttributes = None  # type: ignore
     _wrapped_legacy_mock: _base_mock_types | None
     _mock_return_value_cache: Any | MISSING_TYPE = None
@@ -188,6 +191,7 @@ class _MegaMockMixin(Generic[T, U]):
         :param _wraps_mock: the wrapped mock, for internal use
         :param _parent_mega_mock: The parent MegaMock, for internal use
         """
+        self.meganame = self._generate_meganame()
         megamock_attrs = MegaMockAttributes()
         self._wrapped_legacy_mock = None
         self._mock_return_value_cache = MISSING
@@ -237,6 +241,16 @@ class _MegaMockMixin(Generic[T, U]):
         self.megamock = megamock_attrs
         # shortcut to the wrapped mock to avoid performance penalty
         self._wrapped_legacy_mock = megamock_attrs._wrapped_mock
+
+    def _generate_meganame(self) -> str:
+        """
+        Generate a random adjective / noun / number name for the mock
+        """
+        return (
+            f"{random.choice(name_words.ADJECTIVES)} "
+            f"{random.choice(name_words.NOUNS)} "
+            f"{random.randint(0, 10000)}"
+        )
 
     @property
     def megainstance(self) -> U:
