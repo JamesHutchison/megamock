@@ -67,6 +67,9 @@ MegaMock was created to address some shortcomings in the built-in Python library
   points to the original. You can work around this by doing `import other_module` and referencing `Thing`
   by `other_module.Thing`. MegaMock does not have this problem, and it doesn't matter how you import.
 
+## Features
+
+See the [full features list](FEATURES.md).
 ## Example Usage
 
 ### Production Code
