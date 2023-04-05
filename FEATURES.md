@@ -37,7 +37,7 @@ my_module.Foo
 Mega(my_mock.some_method).use_real_logic()
 ```
 
-## Type hints are provided
+## Static type hinting support
 
 ![Type hints](docs/img/type-hinting.png)
 
@@ -70,7 +70,7 @@ my_patch.set_context_manager_side_effect(Exception("IO Error!"))
 my_patch.set_context_manager_exit_side_effect(Exception("Failed to close transaction!"))
 ```
 
-## Human friendly names
+## Human friendly names via `meganame`
 
 ```python
 returned = my_mock()
