@@ -240,7 +240,7 @@ class MegaPatch(Generic[T, U]):
         if isinstance(thing, cached_property):
             thing = thing.func  # type: ignore
 
-        passed_in_name = argname("thing", vars_only=False)
+        passed_in_name = argname("thing", func=MegaPatch.it, vars_only=False)
 
         module_path = MegaPatch._determine_module_path(thing, passed_in_name)
 
