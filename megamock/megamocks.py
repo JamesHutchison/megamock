@@ -152,6 +152,8 @@ class _MegaMockMixin(Generic[T, U]):
     megamock: MegaMockAttributes = None  # type: ignore
     _wrapped_legacy_mock: _base_mock_types | None
     _mock_return_value_cache: Any | MISSING_TYPE = None
+    # link call behavior to this mock
+    _linked_mock: MegaMock[T, U] | None = None
 
     def __init__(
         self,
@@ -192,6 +194,7 @@ class _MegaMockMixin(Generic[T, U]):
         :param _parent_mega_mock: The parent MegaMock, for internal use
         """
         self.meganame = self._generate_meganame()
+        self._linked_mock = None
         megamock_attrs = MegaMockAttributes()
         self._wrapped_legacy_mock = None
         self._mock_return_value_cache = MISSING
@@ -428,6 +431,15 @@ class _MegaMockMixin(Generic[T, U]):
             self._wrapped_legacy_mock.__dict__.get("_mock_return_value") is UseRealLogic
         )
 
+    def link_to(self, other: MegaMock[T, U]) -> None:
+        self.__dict__["_linked_mock"] = other
+
+    def __repr__(self) -> str:
+        return (
+            f"<{self.__class__.__name__} name='{self._mock_name}' "
+            f"| {self.meganame}>"
+        )
+
 
 class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     """
@@ -659,6 +671,9 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
                     # instance of a class Mock
                     return cast(Callable, spec)(self.megamock.parent, *args, **kwargs)
                 return cast(Callable, spec)(*args, **kwargs)
+            if self._linked_mock is not None:
+                # why is the mock not called as a bound method
+                return self._linked_mock(self, *args, **kwargs)
             result = wrapped(*args, **kwargs)
             if not isinstance(result, _MegaMockMixin) and isinstance(
                 result, mock.NonCallableMock | mock.NonCallableMagicMock

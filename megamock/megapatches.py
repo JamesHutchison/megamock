@@ -5,7 +5,7 @@ import logging
 import sys
 from functools import cached_property
 from types import ModuleType
-from typing import Any, Callable, Generic, TypeVar, cast
+from typing import Any, Callable, Generic, Iterable, TypeVar, cast
 from unittest import mock
 
 from varname import argname  # type: ignore
@@ -162,7 +162,11 @@ class MegaPatch(Generic[T, U]):
 
     @staticmethod
     def _get_new_and_return_value_with_autospec(
-        behavior: MegaPatchBehavior, thing: Any, spec_set: bool, return_value: Any
+        behavior: MegaPatchBehavior,
+        thing: Any,
+        spec_set: bool,
+        return_value: Any,
+        side_effect: Iterable | Exception | None,
     ) -> tuple[Any, Any]:
         if behavior.autospec:
             autospeced = mock.create_autospec(thing, spec_set=spec_set)
@@ -170,6 +174,8 @@ class MegaPatch(Generic[T, U]):
                 assert hasattr(autospeced, "return_value")
                 if return_value is not _MISSING:
                     autospeced.return_value = return_value
+                if side_effect is not None:
+                    autospeced.side_effect = side_effect  # type: ignore
                 new = autospeced
             else:
                 new = MegaMock.from_legacy_mock(autospeced, spec=thing)
@@ -220,6 +226,13 @@ class MegaPatch(Generic[T, U]):
             )
             mocker = mock
 
+        if isinstance(thing, _MegaMockMixin):
+            parent_mock = thing.megamock.parent
+            assert thing.megamock.spec is not None
+            thing = thing.megamock.spec
+        else:
+            parent_mock = None
+
         if behavior is None:
             behavior = MegaPatchBehavior.for_thing(thing)
         if new_callable is not None:
@@ -233,10 +246,6 @@ class MegaPatch(Generic[T, U]):
             new, return_value = MegaPatch._new_return_value(
                 thing, spec_set, new, kwargs, behavior
             )
-
-        if isinstance(thing, _MegaMockMixin):
-            assert thing.megamock.spec is not None
-            thing = thing.megamock.spec
         if isinstance(thing, cached_property):
             thing = thing.func  # type: ignore
 
@@ -257,6 +266,16 @@ class MegaPatch(Generic[T, U]):
         )
         if autostart:
             mega_patch.start()
+
+        if parent_mock is not None:
+            assert passed_in_name
+            this_name = passed_in_name.split(".")[-1]
+            try:
+                cast(MegaMock, getattr(parent_mock.megainstance, this_name)).link_to(
+                    mega_patch.mock
+                )
+            except ValueError:
+                pass  # not a mock
         return mega_patch
 
     @staticmethod
@@ -268,13 +287,18 @@ class MegaPatch(Generic[T, U]):
         behavior: MegaPatchBehavior,
     ) -> tuple[Any, Any]:
         provided_return_value = kwargs.pop("return_value", _MISSING)
+        side_effect = kwargs.pop("side_effect", None)
 
         MegaPatch._gotcha_check(provided_return_value, behavior)
 
         if new_given is None:
             if behavior.autospec:
                 new, return_value = MegaPatch._get_new_and_return_value_with_autospec(
-                    behavior, thing, spec_set, provided_return_value
+                    behavior,
+                    thing,
+                    spec_set,
+                    provided_return_value,
+                    side_effect=side_effect,
                 )
             else:
                 if provided_return_value is _MISSING:
@@ -284,8 +308,9 @@ class MegaPatch(Generic[T, U]):
                 new = MegaMock[None, None](return_value=return_value)
         else:
             new = new_given
-            if hasattr(new, "return_value"):
+            if provided_return_value is not _MISSING:
                 logger.warning("Ignoring return_value argument when 'new' is provided")
+            if hasattr(new, "return_value"):
                 return_value = new.return_value
             else:
                 return_value = None
