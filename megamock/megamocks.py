@@ -431,7 +431,11 @@ class _MegaMockMixin(Generic[T, U]):
             self._wrapped_legacy_mock.__dict__.get("_mock_return_value") is UseRealLogic
         )
 
-    def link_to(self, other: MegaMock[T, U]) -> None:
+    def _megalink_to(self, other: MegaMock[T, U]) -> None:
+        """
+        Link the call behavior to another mock. This is currently used by `MegaPatch.it`
+        to link the class (type) mock with the class (instance) mock.
+        """
         self.__dict__["_linked_mock"] = other
 
     def __repr__(self) -> str:

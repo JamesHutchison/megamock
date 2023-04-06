@@ -267,16 +267,23 @@ class MegaPatch(Generic[T, U]):
         if autostart:
             mega_patch.start()
 
+        MegaPatch._maybe_assign_link(parent_mock, passed_in_name, mega_patch)
+
+        return mega_patch
+
+    @staticmethod
+    def _maybe_assign_link(
+        parent_mock: _MegaMockMixin | None, passed_in_name: str, mega_patch: MegaPatch
+    ) -> None:
         if parent_mock is not None:
             assert passed_in_name
             this_name = passed_in_name.split(".")[-1]
             try:
-                cast(MegaMock, getattr(parent_mock.megainstance, this_name)).link_to(
-                    mega_patch.mock
-                )
+                cast(
+                    MegaMock, getattr(parent_mock.megainstance, this_name)
+                )._megalink_to(mega_patch.mock)
             except ValueError:
                 pass  # not a mock
-        return mega_patch
 
     @staticmethod
     def _new_return_value(
