@@ -119,6 +119,52 @@ class TestMegaPatchPatching:
 
         assert Foo("s").some_method() == "value"
 
+    def test_setting_side_effect(self) -> None:
+        MegaPatch.it(Foo.some_method, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").some_method()
+
+        assert str(exc.value) == "Error!"
+
+    @pytest.mark.xfail
+    def test_setting_side_effect_to_a_property(self) -> None:
+        # This doesn't work because side_effect requires making a call.
+        # If you really need to have a property that raises an exception,
+        # then you'll need to structure your code to call a function
+        # and then mock that function.
+        MegaPatch.it(Foo.helpful_manager, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").helpful_manager
+
+        assert str(exc.value) == "Error!"
+
+    def test_stacked_patching_return_value(self) -> None:
+        MegaPatch.it(Foo)
+        MegaPatch.it(Foo.some_method, return_value="new val")
+
+        assert Foo("s").some_method() == "new val"
+
+    def test_stacked_patching_side_effect(self) -> None:
+        MegaPatch.it(Foo)
+        MegaPatch.it(Foo.some_method, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").some_method()
+
+        assert str(exc.value) == "Error!"
+
+    @pytest.mark.xfail
+    def test_assigning_return_value_later_on_class_mock_reflected_in_instance(
+        self,
+    ) -> None:
+        # there's no magic that allows this to work
+        patch = MegaPatch.it(Foo)
+        patch.mock.some_method.return_value = "new val"
+
+        assert Foo("s").some_method() == "new val"
+
 
 class TestMegaPatchAutoStart:
     def test_enabled_by_default(self) -> None:
