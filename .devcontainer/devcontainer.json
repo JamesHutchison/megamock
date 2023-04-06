@@ -14,11 +14,15 @@
 	// "customizations": {},
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root",
-	"extensions": [
-		"ms-python.python",
-		"tamasfe.even-better-toml"
-	],
-	"settings": {
-		"python.defaultInterpreterPath": "/workspaces/python/.venv/python"
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"tamasfe.even-better-toml"
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/workspaces/python/.venv/python"
+			}
+		}
 	}
 }
