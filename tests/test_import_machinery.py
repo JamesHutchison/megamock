@@ -1,6 +1,5 @@
 import inspect
 import linecache
-from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
