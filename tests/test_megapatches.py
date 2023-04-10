@@ -14,7 +14,9 @@ from tests.simple_app.bar import some_func
 from tests.simple_app.bar import some_func as some_other_func
 from tests.simple_app.foo import Foo
 from tests.simple_app.foo import Foo as OtherFoo
-from tests.simple_app.foo import bar, foo_instance
+from tests.simple_app.foo import bar
+from tests.simple_app.foo import bar as other_bar_constant
+from tests.simple_app.foo import foo_instance
 from tests.simple_app.helpful_manager import HelpfulManager
 from tests.simple_app.locks import SomeLock
 from tests.simple_app.nested_classes import NestedParent
@@ -127,6 +129,12 @@ class TestMegaPatchPatching:
 
         assert other_bar.some_func("v") == "r"
         assert some_other_func("v") == "r"
+
+    def test_patch_renamed_constant_primitive(self) -> None:
+        MegaPatch.it(other_bar_constant, new="new_val")
+
+        assert other_bar_constant == "new_val"
+        assert foo.bar == "new_val"
 
     @pytest.mark.xfail
     def test_patch_with_real_logic(self) -> None:
