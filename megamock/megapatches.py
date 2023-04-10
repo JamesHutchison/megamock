@@ -250,11 +250,14 @@ class MegaPatch(Generic[T, U]):
             thing = thing.func  # type: ignore
 
         passed_in_name = argname("thing", func=MegaPatch.it, vars_only=False)
+        corrected_passed_in_name = MegaPatch._correct_for_renamed_import(
+            passed_in_name, thing
+        )
 
-        module_path = MegaPatch._determine_module_path(thing, passed_in_name)
+        module_path = MegaPatch._determine_module_path(thing, corrected_passed_in_name)
 
         patches = MegaPatch._build_patches(
-            mocker, module_path, passed_in_name, new, kwargs
+            mocker, module_path, corrected_passed_in_name, new, kwargs
         )
 
         mega_patch = MegaPatch[T, type[MegaMock | T]](
@@ -267,9 +270,16 @@ class MegaPatch(Generic[T, U]):
         if autostart:
             mega_patch.start()
 
-        MegaPatch._maybe_assign_link(parent_mock, passed_in_name, mega_patch)
+        MegaPatch._maybe_assign_link(parent_mock, corrected_passed_in_name, mega_patch)
 
         return mega_patch
+
+    @staticmethod
+    def _correct_for_renamed_import(passed_in_name: str, thing: Any) -> str:
+        qualname = getattr(thing, "__qualname__", None)
+        if qualname is None:
+            return passed_in_name
+        return qualname
 
     @staticmethod
     def _maybe_assign_link(
@@ -354,12 +364,12 @@ class MegaPatch(Generic[T, U]):
         mocker: Any, module_path: str, passed_in_name: str, new: Any, kwargs: dict
     ) -> list[mock._patch]:  # type: ignore  # mypy bug?
         patches = []
-        for path in (
+        for path, named_as in (
             References.get_references(module_path, passed_in_name)
             | References.reverse_references[module_path][passed_in_name]
-            | {module_path}
+            | {(module_path, passed_in_name)}
         ):
-            mock_path = f"{path}.{passed_in_name}"
+            mock_path = f"{path}.{named_as}"
             p = mocker.patch(mock_path, new, **kwargs)
             patches.append(p)
 

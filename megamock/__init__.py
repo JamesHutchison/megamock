@@ -1,11 +1,13 @@
 import builtins
-import sys
 import inspect
+import re
+import sys
 from types import ModuleType
 
 from megamock.import_references import References
-from .megapatches import MegaPatch
+
 from .megamocks import MegaMock
+from .megapatches import MegaPatch
 from .megas import Mega
 from .type_util import Call
 
@@ -47,7 +49,16 @@ def start_import_mod() -> None:
                     break
             assert calling_module
             for k in names:
-                References.add_reference(target_module, calling_module, k)
+                code_lines = frame[4]
+                if code_lines and (
+                    renamed_result := re.search(
+                        rf"\s*from \S+ import.*\W{k}\s+as\s+(\w+)", code_lines[0]
+                    )
+                ):
+                    renamed_to = renamed_result.group(1)
+                else:
+                    renamed_to = k
+                References.add_reference(target_module, calling_module, k, renamed_to)
 
         return result
 

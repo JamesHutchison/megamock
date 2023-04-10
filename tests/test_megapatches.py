@@ -3,12 +3,15 @@ from unittest import mock
 import pytest
 
 from megamock import MegaPatch
-from megamock.megamocks import UseRealLogic
+from megamock.megamocks import NonCallableMegaMock, UseRealLogic
 from megamock.megapatches import MegaMock
 from megamock.megas import Mega
-from tests.simple_app import foo
+from tests.simple_app import bar as other_bar
+from tests.simple_app import foo, nested_classes
 from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
-from tests.simple_app.bar import Bar, some_context_manager, some_func
+from tests.simple_app.bar import Bar, some_context_manager
+from tests.simple_app.bar import some_func
+from tests.simple_app.bar import some_func as some_other_func
 from tests.simple_app.foo import Foo
 from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app.foo import bar, foo_instance
@@ -97,12 +100,33 @@ class TestMegaPatchPatching:
 
         assert get_nested_class_attribute_value() == "z"
 
-    # Issue https://github.com/JamesHutchison/megamock/issues/13
-    @pytest.mark.xfail
-    def test_patch_renamed_var(self) -> None:
+    def test_patch_renamed_class_method(self) -> None:
         MegaPatch.it(OtherFoo.some_method, return_value="sm")
 
         assert Foo("s").some_method() == "sm"
+
+    def test_patch_renamed_class(self) -> None:
+        MegaPatch.it(OtherFoo)
+
+        assert isinstance(Foo("s"), NonCallableMegaMock)
+
+    def test_patch_renamed_function(self) -> None:
+        MegaPatch.it(some_other_func, return_value="r")
+
+        assert other_bar.some_func("v") == "r"
+        assert some_other_func("v") == "r"
+
+    def test_patch_renamed_nested_class(self) -> None:
+        MegaPatch.it(NestedParent.NestedChild.AnotherNestedChild.a, new="b")
+
+        assert NestedParent.NestedChild.AnotherNestedChild().a == "b"
+        assert nested_classes.NestedParent.NestedChild.AnotherNestedChild().a == "b"
+
+    def test_patch_renamed_parent_module(self) -> None:
+        MegaPatch.it(other_bar.some_func, return_value="r")
+
+        assert other_bar.some_func("v") == "r"
+        assert some_other_func("v") == "r"
 
     @pytest.mark.xfail
     def test_patch_with_real_logic(self) -> None:
