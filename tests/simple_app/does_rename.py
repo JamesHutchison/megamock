@@ -1,4 +1,6 @@
-from .foo import Foo as MyFoo
+from .foo import (
+    Foo as MyFoo
+)
 
 foo_instance = MyFoo("something")
 

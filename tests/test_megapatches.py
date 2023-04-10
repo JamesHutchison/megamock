@@ -12,6 +12,7 @@ from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_f
 from tests.simple_app.bar import Bar, some_context_manager
 from tests.simple_app.bar import some_func
 from tests.simple_app.bar import some_func as some_other_func
+from tests.simple_app.does_rename import func_that_uses_foo as func_uses_foo
 from tests.simple_app.foo import Foo
 from tests.simple_app.foo import Foo as OtherFoo
 from tests.simple_app.foo import bar
@@ -20,10 +21,11 @@ from tests.simple_app.foo import foo_instance
 from tests.simple_app.helpful_manager import HelpfulManager
 from tests.simple_app.locks import SomeLock
 from tests.simple_app.nested_classes import NestedParent
+from tests.simple_app.uses_nested_classes import get_nested_class_attribute_value
 from tests.simple_app.uses_nested_classes import (
-    get_nested_class_attribute_value,
-    get_nested_class_function_value,
+    get_nested_class_attribute_value as another_nested_class_attr,
 )
+from tests.simple_app.uses_nested_classes import get_nested_class_function_value
 
 
 class TestMegaPatchPatching:
@@ -136,13 +138,25 @@ class TestMegaPatchPatching:
         assert other_bar_constant == "new_val"
         assert foo.bar == "new_val"
 
-    def test_patch_that_is_renamed_in_non_test_module(self) -> None:
-        from tests.simple_app.does_rename import func_that_uses_foo
-
+    def test_patch_that_is_renamed_in_non_test_module_1(self) -> None:
         patch = MegaPatch.it(Foo)
         patch.megainstance.some_method.return_value = "it worked"
 
-        func_that_uses_foo() == "it worked"
+        func_uses_foo() == "it worked"
+
+    def test_patch_that_is_renamed_in_non_test_module_2(self) -> None:
+        from tests.simple_app.does_rename import MyFoo
+
+        patch = MegaPatch.it(MyFoo)
+        patch.megainstance.some_method.return_value = "it worked"
+
+        func_uses_foo() == "it worked"
+
+    def test_renamed_multiline(self) -> None:
+        patch = MegaPatch.it(get_nested_class_attribute_value)
+        patch.mock.return_value = "foo"
+
+        assert another_nested_class_attr() == "foo"
 
     @pytest.mark.xfail
     def test_patch_with_real_logic(self) -> None:
