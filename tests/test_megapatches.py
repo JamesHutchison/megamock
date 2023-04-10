@@ -136,6 +136,14 @@ class TestMegaPatchPatching:
         assert other_bar_constant == "new_val"
         assert foo.bar == "new_val"
 
+    def test_patch_that_is_renamed_in_non_test_module(self) -> None:
+        from tests.simple_app.does_rename import MyFoo
+
+        patch = MegaPatch.it(Foo)
+        patch.megainstance.some_method.return_value = "it worked"
+
+        MyFoo("s").some_method() == "it worked"
+
     @pytest.mark.xfail
     def test_patch_with_real_logic(self) -> None:
         # this currently fails because the object created by autospec
