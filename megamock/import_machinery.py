@@ -16,8 +16,6 @@ skip_modules = {
     "asttokens",
 }
 
-next_line_indicator = re.compile(r"\\|\(")
-
 
 def _reconstruct_full_line(
     frame: inspect.FrameInfo, getline: Callable = linecache.getline
@@ -35,7 +33,8 @@ def _reconstruct_full_line(
         # if this is a multiline import, reconstruct the full line
         # the absense of '(' or '\' indicates a single line import
         next_line = code_lines[0]
-        if next_line_indicator.search(next_line):
+        # note: timit gives 0.078569 for this vs 0.134779 for a compiled regex
+        if "(" in next_line or "\\" in next_line:
             filename = frame.filename
             linenum = frame.lineno + 1
 
