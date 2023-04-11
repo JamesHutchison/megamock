@@ -16,31 +16,38 @@ skip_modules = {
     "asttokens",
 }
 
+next_line_indicator = re.compile(r"\\|\(")
+
 
 def _reconstruct_full_line(
     frame: inspect.FrameInfo, getline: Callable = linecache.getline
 ) -> str:
     """
-    Pytest uses linecache.getline to rewrite assertions, so providing
-    getline as a parameter for testing purposes
+    Given an import frame, reconstruct the full import line, which
+    may span multiple lines of code via parenthesis or backslashes
+
+    :param frame: The frame of the import
+    :param getline: Pytest uses linecache.getline to rewrite assertions, so providing
+        getline as a parameter for testing purposes
     """
     code_lines: list[str] | None = frame.code_context
     if code_lines:
-        if re.search(r"[\\|\(]", code_lines[0]):
-            # reconstruct the full line
+        # if this is a multiline import, reconstruct the full line
+        # the absense of '(' or '\' indicates a single line import
+        next_line = code_lines[0]
+        if next_line_indicator.search(next_line):
             filename = frame.filename
             linenum = frame.lineno + 1
 
-            lines = [code_lines[0]]
-            paren_count = code_lines[0].count("(") - code_lines[0].count(")")
-            next_line = code_lines[0]
-            while paren_count > 0 or next_line.rstrip().endswith("\\"):
+            lines = [next_line]
+            paren_count = next_line.count("(") - next_line.count(")")
+            while paren_count > 0 or next_line.rstrip("\n\r").endswith("\\"):
                 next_line = getline(filename, linenum)
                 lines.append(next_line)
                 paren_count -= next_line.count(")")
                 linenum += 1
             return "".join(lines)
-        return code_lines[0]
+        return next_line
     return ""
 
 
