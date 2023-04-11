@@ -250,11 +250,16 @@ class MegaPatch(Generic[T, U]):
             thing = thing.func  # type: ignore
 
         passed_in_name = argname("thing", func=MegaPatch.it, vars_only=False)
+        corrected_passed_in_name = MegaPatch._correct_for_renamed_import(
+            passed_in_name, thing
+        )
 
-        module_path = MegaPatch._determine_module_path(thing, passed_in_name)
+        name_to_patch, module_path = MegaPatch._determine_module_path_and_name(
+            thing, passed_in_name, corrected_passed_in_name
+        )
 
         patches = MegaPatch._build_patches(
-            mocker, module_path, passed_in_name, new, kwargs
+            mocker, module_path, name_to_patch, corrected_passed_in_name, new, kwargs
         )
 
         mega_patch = MegaPatch[T, type[MegaMock | T]](
@@ -267,9 +272,17 @@ class MegaPatch(Generic[T, U]):
         if autostart:
             mega_patch.start()
 
-        MegaPatch._maybe_assign_link(parent_mock, passed_in_name, mega_patch)
+        MegaPatch._maybe_assign_link(parent_mock, corrected_passed_in_name, mega_patch)
 
         return mega_patch
+
+    @staticmethod
+    def _correct_for_renamed_import(passed_in_name: str, thing: Any) -> str:
+        qualname = getattr(thing, "__qualname__", None)
+        if qualname is None:
+            module_name = MegaPatch._get_module_path_for_nonclass()
+            return References.get_original_name(module_name, passed_in_name)
+        return qualname
 
     @staticmethod
     def _maybe_assign_link(
@@ -337,29 +350,36 @@ class MegaPatch(Generic[T, U]):
             )
 
     @staticmethod
-    def _determine_module_path(thing: Any, passed_in_name: str) -> str:
+    def _determine_module_path_and_name(
+        thing: Any, passed_in_name: str, corrected_passed_in_name: str
+    ) -> tuple[str, str]:
         if not (module_path := getattr(thing, "__module__", None)):
             owning_class = MegaPatch._get_owning_class(passed_in_name)
             if owning_class:
-                module_path = owning_class.__module__
+                return corrected_passed_in_name, owning_class.__module__
         if module_path is None:
             module_path = MegaPatch._get_module_path_for_nonclass()
-
-        if module_path is None:
-            raise Exception(f"Unable to determine module path for: {thing!r}")
-        return module_path
+            if module_path is None:
+                raise Exception(f"Unable to determine module path for: {thing!r}")
+            return passed_in_name, module_path
+        return corrected_passed_in_name, module_path
 
     @staticmethod
     def _build_patches(
-        mocker: Any, module_path: str, passed_in_name: str, new: Any, kwargs: dict
+        mocker: Any,
+        module_path: str,
+        name_to_patch: str,
+        corrected_passed_in_name: str,
+        new: Any,
+        kwargs: dict,
     ) -> list[mock._patch]:  # type: ignore  # mypy bug?
         patches = []
-        for path in (
-            References.get_references(module_path, passed_in_name)
-            | References.reverse_references[module_path][passed_in_name]
-            | {module_path}
+        for path, named_as in (
+            References.get_references(module_path, corrected_passed_in_name)
+            | References.get_reverse_references(module_path, corrected_passed_in_name)
+            | {(module_path, name_to_patch)}
         ):
-            mock_path = f"{path}.{passed_in_name}"
+            mock_path = f"{path}.{named_as}"
             p = mocker.patch(mock_path, new, **kwargs)
             patches.append(p)
 

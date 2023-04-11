@@ -90,6 +90,10 @@ class Mega:
 
         Extra calls are ignored.
         """
+        try:
+            iter(calls)
+        except TypeError:
+            raise TypeError("First argument must be an iterable of call objects")
         return self._check_mock_assertion(
             lambda: self._mm.assert_has_calls(calls, any_order)
         )

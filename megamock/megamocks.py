@@ -298,6 +298,9 @@ class _MegaMockMixin(Generic[T, U]):
                 )
                 return result
 
+        if key == "_spec_signature":
+            return self.__signature__
+
         if (wrapped := self._wrapped_legacy_mock) is not None:
             result = getattr(wrapped, key)
             if not isinstance(result, _MegaMockMixin) and isinstance(
