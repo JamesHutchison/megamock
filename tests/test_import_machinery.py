@@ -36,13 +36,13 @@ class TestReconstructFullLine:
         )
 
     def test_multiline_backslash_code(self) -> None:
-        self._mock_frame.code_context = ["from foo import \\\n"]
+        self._mock_frame.code_context = ["from foo import \\\r\n"]
         self._mock_frame.filename = "a_file.py"
         self._mock_frame.lineno = 2
         getline = MegaMock.it(
             linecache.getline,
-            side_effect=["    bar,\\\n", "    baz\n", "dont be here\n"],
+            side_effect=["    bar,\\\r\n", "    baz\r\n", "dont be here\r\n"],
         )
         result = _reconstruct_full_line(self._mock_frame, getline=getline)
-        assert result == "from foo import \\\n    bar,\\\n    baz\n"
+        assert result == "from foo import \\\r\n    bar,\\\r\n    baz\r\n"
         assert Mega(getline).has_calls([call("a_file.py", 3), call("a_file.py", 4)])
