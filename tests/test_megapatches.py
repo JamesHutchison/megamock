@@ -492,3 +492,16 @@ class TestMegaPatchAsFunctionDecorator:
             test()
 
         assert Foo("s").some_method() == "value"
+
+
+class TestMegaPatchNames:
+    def test_megapatch_class(self) -> None:
+        patch = MegaPatch.it(Foo)
+        assert "name='Foo()'" in str(patch.return_value)
+
+    @pytest.mark.xfail
+    def test_megapatch_method(self) -> None:
+        # this doesn't work as expected because autospec creates a function
+        # that bypasses MegaMock logic and returns MagicMock
+        patch = MegaPatch.it(Foo.some_method)
+        assert "name='Foo.some_method'" in str(patch.return_value)
