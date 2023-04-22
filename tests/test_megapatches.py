@@ -445,3 +445,18 @@ class TestMegaPatchContextManager:
     def test_setting_exit_side_effect_for_non_context_manager(self) -> None:
         with pytest.raises(ValueError):
             MegaPatch.it(Foo).set_context_manager_exit_side_effect(Exception())
+
+
+class TestMegaPatchAsContextManager:
+    def test_when_autostart_left_to_default(self) -> None:
+        with MegaPatch.it(Foo.some_method, return_value="val"):
+            assert Foo("s").some_method() == "val"
+
+        assert Foo("s").some_method() == "value"
+
+    def test_when_autostart_is_false(self) -> None:
+        patch = MegaPatch.it(Foo.some_method, return_value="val", autostart=False)
+        with patch:
+            assert Foo("s").some_method() == "val"
+
+        assert Foo("s").some_method() == "value"

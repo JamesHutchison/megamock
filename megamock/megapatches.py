@@ -69,6 +69,8 @@ class MegaPatch(Generic[T, U]):
         self._return_value = return_value
         self._mocker = mocker
 
+        self._started = False
+
     @property
     def patches(self) -> list[mock._patch]:
         return list(self._patches)
@@ -134,12 +136,15 @@ class MegaPatch(Generic[T, U]):
             raise ValueError("Not a context manager")
 
     def start(self) -> None:
+        if self._started:
+            return
         # support for pytest-mock and similar
         if not hasattr(self._mocker, "stopall"):
             # built-in mock
             for patch in self._patches:
                 patch.start()
         MegaPatch._active_patches.add(self)
+        self._started = True
 
     def stop(self) -> None:
         # support for pytest-mock and similar
@@ -150,6 +155,14 @@ class MegaPatch(Generic[T, U]):
             for patch in self._patches:
                 patch.stop()
         MegaPatch._active_patches.remove(self)
+        self._started = False
+
+    def __enter__(self) -> MegaPatch[T, U]:
+        self.start()
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.stop()
 
     @staticmethod
     def active_patches() -> list[MegaPatch]:
