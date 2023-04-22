@@ -258,6 +258,8 @@ class _MegaMockMixin(Generic[T, U]):
             mock_name = parent_mega_mock.megamock.name or "MegaMock"
             if name is None:
                 mock_name += "()"
+            else:
+                mock_name += "." + name
         else:
             if spec is None:
                 mock_name = "MegaMock()"
@@ -276,8 +278,6 @@ class _MegaMockMixin(Generic[T, U]):
             mock_name += "mock"
             if parent_mega_mock:
                 mock_name += "()"
-        if name:
-            mock_name += "." + name
         return mock_name
 
     def _generate_meganame(self) -> str:
