@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import inspect
 import logging
 import sys
@@ -163,6 +164,21 @@ class MegaPatch(Generic[T, U]):
 
     def __exit__(self, *args: Any) -> None:
         self.stop()
+
+    def __call__(self, func) -> Callable[..., Any]:
+        """
+        Decorator to patch a function
+        """
+
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            self.start()
+            try:
+                return func(*args, **kwargs)
+            finally:
+                self.stop()
+
+        return wrapper
 
     @staticmethod
     def active_patches() -> list[MegaPatch]:

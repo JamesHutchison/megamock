@@ -460,3 +460,35 @@ class TestMegaPatchAsContextManager:
             assert Foo("s").some_method() == "val"
 
         assert Foo("s").some_method() == "value"
+
+
+class TestMegaPatchAsFunctionDecorator:
+    def test_when_autostart_left_to_default(self) -> None:
+        @MegaPatch.it(Foo.some_method, return_value="val")
+        def test() -> None:
+            assert Foo("s").some_method() == "val"
+
+        test()
+
+        assert Foo("s").some_method() == "value"
+
+    def test_when_autostart_is_false(self) -> None:
+        patch = MegaPatch.it(Foo.some_method, return_value="val")
+
+        @patch
+        def test() -> None:
+            assert Foo("s").some_method() == "val"
+
+        test()
+
+        assert Foo("s").some_method() == "value"
+
+    def test_when_exception_thrown(self) -> None:
+        @MegaPatch.it(Foo.some_method, return_value="val")
+        def test() -> None:
+            raise Exception("Err")
+
+        with pytest.raises(Exception):
+            test()
+
+        assert Foo("s").some_method() == "value"
