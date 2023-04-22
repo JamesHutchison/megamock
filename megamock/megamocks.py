@@ -125,6 +125,7 @@ class MegaMockAttributes:
     spied_access: dict[str, list[SpyAccess]] = field(
         default_factory=lambda: defaultdict(list)
     )
+    name: str | None = None
 
     _wrapped_mock: _base_mock_types | None = None
 
@@ -154,6 +155,7 @@ class _MegaMockMixin(Generic[T, U]):
     _mock_return_value_cache: Any | MISSING_TYPE = None
     # link call behavior to this mock
     _linked_mock: MegaMock[T, U] | None = None
+    _mock_name: str
 
     def __init__(
         self,
@@ -173,6 +175,7 @@ class _MegaMockMixin(Generic[T, U]):
             | None
         ) = None,
         _parent_mega_mock: _MegaMockMixin | None = None,
+        _name: str | None = None,
         _merged_type: type[U] | None = None,
         # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
@@ -192,10 +195,13 @@ class _MegaMockMixin(Generic[T, U]):
         :param return_value: The return value to use for the mock.
         :param _wraps_mock: the wrapped mock, for internal use
         :param _parent_mega_mock: The parent MegaMock, for internal use
+        :param _name: The name of the mock, for internal use
         """
         self.meganame = self._generate_meganame()
+
         self._linked_mock = None
         megamock_attrs = MegaMockAttributes()
+        megamock_attrs.name = self._generate_mock_name(spec, _parent_mega_mock, _name)
         self._wrapped_legacy_mock = None
         self._mock_return_value_cache = MISSING
 
@@ -244,6 +250,35 @@ class _MegaMockMixin(Generic[T, U]):
         self.megamock = megamock_attrs
         # shortcut to the wrapped mock to avoid performance penalty
         self._wrapped_legacy_mock = megamock_attrs._wrapped_mock
+
+    def _generate_mock_name(
+        self, spec: Any, parent_mega_mock: _MegaMockMixin | None, name: str | None
+    ) -> str:
+        if parent_mega_mock is not None:
+            mock_name = parent_mega_mock.megamock.name or "MegaMock"
+            if name is None:
+                mock_name += "()"
+            else:
+                mock_name += "." + name
+        else:
+            if spec is None:
+                mock_name = "MegaMock()"
+            else:
+                mock_name = ""
+        try:
+            if spec is not None:
+                spec_name = getattr(spec, "__name__", None)
+                if spec_name is not None:
+                    if mock_name:
+                        mock_name += "."
+                    mock_name += spec_name
+                else:
+                    mock_name += spec.__class__.__name__
+        except AttributeError:
+            mock_name += "mock"
+            if parent_mega_mock:
+                mock_name += "()"
+        return mock_name
 
     def _generate_meganame(self) -> str:
         """
@@ -315,6 +350,8 @@ class _MegaMockMixin(Generic[T, U]):
                 setattr(wrapped, key, mega_result)
                 return mega_result
             return result
+        if not self.megamock.spec and not self.megamock.wraps:
+            return self._get_child_mock(_name=key)
         raise AttributeError(key)
 
     def __setattr__(self, key, value) -> None:
@@ -443,7 +480,7 @@ class _MegaMockMixin(Generic[T, U]):
 
     def __repr__(self) -> str:
         return (
-            f"<{self.__class__.__name__} name='{self._mock_name}' "
+            f"<{self.__class__.__name__} name='{self.megamock.name}' "
             f"| {self.meganame}>"
         )
 
@@ -686,9 +723,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
             ):
                 mega_result = MegaMock.from_legacy_mock(
-                    result,
-                    None,
-                    self.megamock.wraps,
+                    result, None, self.megamock.wraps, parent_megamock=self
                 )
                 return mega_result
             return result

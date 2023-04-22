@@ -18,6 +18,7 @@ from megamock.megas import Mega
 from tests.conftest import SomeClass
 from tests.simple_app.bar import Bar
 from tests.simple_app.foo import Foo
+from tests.simple_app.nested_classes import NestedParent
 
 
 class TestAttributeTrackingBase:
@@ -127,6 +128,49 @@ class TestMegaMock:
         assert adjective in name_words.ADJECTIVES
         assert noun in name_words.NOUNS
         int(number)  # shouldn't error
+
+    class TestGenerateMockName:
+        def test_name_of_class(self) -> None:
+            mega_mock = MegaMock.it(Foo)
+            assert "name='Foo'" in str(mega_mock)
+
+        def test_name_of_method(self) -> None:
+            mega_mock = MegaMock.it(Foo)
+            child_mock = mega_mock.some_method()
+            assert "name='Foo().some_method()'" in str(child_mock)
+
+        def test_name_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+
+            assert "name='MegaMock()'" in str(mock)
+
+        def test_child_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+
+            assert "name='MegaMock()()'" in str(mock())
+
+        def test_attribute_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+            child_mock = mock.some_attribute
+
+            assert "name='MegaMock().some_attribute'" in str(child_mock)
+
+        def test_nested_attribute_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+            child_mock = mock.some_attribute.some_other_attribute
+
+            assert "name='MegaMock().some_attribute.some_other_attribute'" in str(
+                child_mock
+            )
+
+        def test_nested_objects(self) -> None:
+            mock = MegaMock.it(NestedParent)
+            result = mock.NestedChild.AnotherNestedChild.z()
+
+            assert (
+                "name='NestedParent().NestedChild().AnotherNestedChild().z()'"
+                in str(result)
+            )
 
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:
