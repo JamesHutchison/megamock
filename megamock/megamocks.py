@@ -748,29 +748,8 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             return
         if self.megamock.spec is None:
             return
-        # if self.megamock._wrapped_mock is not None:
-        #     if self.megamock.instance and not getattr(
-        #         self, "_mock_return_value_", None
-        #     ):
-        #         if not _instance_callable(self.megamock.spec):
-        #             raise TypeError(f"{self.megamock.spec} is not callable")
-        #     else:
         if not callable(self.megamock.spec):
             raise TypeError(f"{self.megamock.spec} is not callable")
-
-        # if not self.megamock.spec:
-        #     return
-        # # if spec is a type, check if the instance is callable
-        # if not hasattr(self.megamock.spec, "__call__"):
-        #     raise TypeError(f"{self.megamock.spec} is not callable")
-        # if not callable(self.megamock.spec):
-        #     raise TypeError(f"{self.megamock.spec} is not callable")
-        # # if the spec is a Union
-        # if (
-        #     typing.get_origin(self.megamock.spec) == typing.Union
-        # ):
-        #     if not any(callable(t) for t in self.megamock.spec.__args__):
-        #         raise TypeError(f"{self.megamock.spec} is not callable")
 
     def _get_call_spec(self) -> Any:
 
@@ -779,10 +758,6 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         annotations = self.megamock.spec.__annotations__
         return_type = annotations.get("return", None)
         return create_autospec(return_type, instance=True)
-        return return_type
-        # if return_type is None:
-        #     return None
-        # if isinstance(return_type, typing.Union):
 
 
 class NonCallableMegaMock(
