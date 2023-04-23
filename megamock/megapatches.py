@@ -306,8 +306,6 @@ class MegaPatch(Generic[T, U]):
 
         MegaPatch._maybe_assign_link(parent_mock, corrected_passed_in_name, mega_patch)
 
-        # MegaPatch._maybe_correct_return_value_spec(new, return_value)
-
         return mega_patch
 
     @staticmethod
