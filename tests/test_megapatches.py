@@ -291,15 +291,15 @@ class TestMegaPatchReturnValue:
 
         assert Foo("s").some_method() == "value"
 
-    def test_enable_real_logic_with_casting(self) -> None:
+    def test_enable_real_logic_mega(self) -> None:
         patch = MegaPatch.it(Foo)
         Mega(patch.return_value.some_method).use_real_logic()
 
         assert Foo("s").some_method() == "value"
 
-    # see: https://github.com/JamesHutchison/megamock/issues/43
     @pytest.mark.xfail
     def test_using_actual_thing_to_enable_real_logic(self) -> None:
+        # must use the mock to assign real logic
         MegaPatch.it(Foo)
         Mega(Foo.some_method).use_real_logic()
 
@@ -497,6 +497,12 @@ class TestMegaPatchAsFunctionDecorator:
 class TestMegaPatchNames:
     def test_megapatch_class(self) -> None:
         patch = MegaPatch.it(Foo)
+
+        assert "name='Foo'" in str(patch.mock)
+
+    def test_megapatch_class_instance(self) -> None:
+        patch = MegaPatch.it(Foo)
+
         assert "name='Foo()'" in str(patch.return_value)
 
     @pytest.mark.xfail

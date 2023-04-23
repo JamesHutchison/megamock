@@ -30,5 +30,8 @@ class Foo:
     def what_moos(self) -> str:
         return f"The {self.moo} moos"
 
+    def get_a_manager(self) -> HelpfulManager:
+        return HelpfulManager()
+
 
 foo_instance = Foo("global")

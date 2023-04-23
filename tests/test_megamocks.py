@@ -137,7 +137,7 @@ class TestMegaMock:
         def test_name_of_method(self) -> None:
             mega_mock = MegaMock.it(Foo)
             child_mock = mega_mock.some_method()
-            assert "name='Foo().some_method()'" in str(child_mock)
+            assert "name='Foo.some_method() -> str'" in str(child_mock)
 
         def test_name_of_mock_with_no_spec(self) -> None:
             mock = MegaMock()
@@ -168,8 +168,24 @@ class TestMegaMock:
             result = mock.NestedChild.AnotherNestedChild.z()
 
             assert (
-                "name='NestedParent().NestedChild().AnotherNestedChild().z()'"
+                "name='NestedParent.NestedChild.AnotherNestedChild.z() -> str'"
                 in str(result)
+            )
+
+        def test_cached_property(self) -> None:
+            mock = MegaMock.it(Foo)
+            assert "name='Foo.helpful_manager" in str(mock.helpful_manager)
+
+        def test_method_return_value(self) -> None:
+            mock = MegaMock.it(Foo)
+            assert "name='Foo.get_a_manager() -> HelpfulManager'" in str(
+                mock.get_a_manager()
+            )
+
+        def test_method_return_value_attribute(self) -> None:
+            mock = MegaMock.it(Foo)
+            assert "name='Foo.get_a_manager() -> HelpfulManager.a'" in str(
+                mock.get_a_manager().a
             )
 
     class TestMockingAClass:
@@ -223,12 +239,10 @@ class TestMegaMock:
 
             mock_instance()
 
-        # The return type for callable is not inspected, so a generic MegaMock
-        # is always used. To support this, the annotated return type for __call__
-        # would need to be inspected
-        # Issue https://github.com/JamesHutchison/megamock/issues/14
-        @pytest.mark.xfail
-        def test_callable_result_has_same_callable_property(self) -> None:
+        def test_callable_return_type_matches_annotations(self) -> None:
+            with pytest.raises(TypeError):
+                MegaMock.it(Foo).some_method()()
+
             mock_instance = MegaMock.it(Bar)
 
             with pytest.raises(TypeError):

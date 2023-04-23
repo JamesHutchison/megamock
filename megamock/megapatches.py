@@ -84,12 +84,15 @@ class MegaPatch(Generic[T, U]):
     def new_value(self) -> MegaMock[T, U] | Any:
         return self._new_value
 
+    def new_value_is_mock(self) -> bool:
+        val = self.new_value
+        return isinstance(val, MegaMock) or hasattr(val, "return_value")
+
     @property
     def mock(self) -> MegaMock[T, U]:
-        val = self.new_value
-        if not isinstance(val, MegaMock) and not hasattr(val, "return_value"):
-            raise ValueError(f"New value {val!r} is not a mock!")
-        return val
+        if not self.new_value_is_mock():
+            raise ValueError(f"New value {self.new_value!r} is not a mock!")
+        return self.new_value
 
     @property
     def megainstance(self) -> U:
@@ -303,6 +306,8 @@ class MegaPatch(Generic[T, U]):
 
         MegaPatch._maybe_assign_link(parent_mock, corrected_passed_in_name, mega_patch)
 
+        # MegaPatch._maybe_correct_return_value_spec(new, return_value)
+
         return mega_patch
 
     @staticmethod
@@ -312,6 +317,14 @@ class MegaPatch(Generic[T, U]):
             module_name = MegaPatch._get_module_path_for_nonclass()
             return References.get_original_name(module_name, passed_in_name)
         return qualname
+
+    # @staticmethod
+    # def _maybe_correct_return_value_spec(new: Any, return_value: Any) -> None:
+    #     # Fix spec for Foo() -> instance of Foo
+    #     if isinstance(new, MegaMock):
+    #         if isinstance(return_value, _MegaMockMixin):
+    #             if return_value.megamock.spec is None:
+    #                 return_value.megamock.spec = new.megamock.spec
 
     @staticmethod
     def _maybe_assign_link(
@@ -326,6 +339,13 @@ class MegaPatch(Generic[T, U]):
                 )._megalink_to(mega_patch.mock)
             except ValueError:
                 pass  # not a mock
+        # elif mega_patch.new_value_is_mock() and hasattr(mega_patch.mock, "megamock"):
+        #     assert passed_in_name
+        #     this_name = passed_in_name.split(".")[-1]
+        #     if this_name == passed_in_name and inspect.isclass(
+        #         mega_patch.mock.megamock.spec
+        #     ):
+        #         cast(MegaMock, mega_patch.megainstance)._megalink_to(mega_patch.mock)
 
     @staticmethod
     def _new_return_value(

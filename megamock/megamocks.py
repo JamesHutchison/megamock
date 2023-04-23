@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from inspect import isawaitable, isclass, iscoroutinefunction
 from typing import Any, Callable, Generic, Literal, TypeVar, cast, overload
 from unittest import mock
+from unittest.mock import create_autospec
 
 from megamock import name_words
 from megamock.type_util import MISSING, MISSING_TYPE
@@ -155,7 +156,6 @@ class _MegaMockMixin(Generic[T, U]):
     _mock_return_value_cache: Any | MISSING_TYPE = None
     # link call behavior to this mock
     _linked_mock: MegaMock[T, U] | None = None
-    _mock_name: str
 
     def __init__(
         self,
@@ -211,6 +211,7 @@ class _MegaMockMixin(Generic[T, U]):
                 instance = False
             else:
                 instance = True
+
         if wraps and spy:
             # if spy is used, then the spied value is also wrapped
             raise Exception("Cannot both wrap and spy")
@@ -252,19 +253,17 @@ class _MegaMockMixin(Generic[T, U]):
         self._wrapped_legacy_mock = megamock_attrs._wrapped_mock
 
     def _generate_mock_name(
-        self, spec: Any, parent_mega_mock: _MegaMockMixin | None, name: str | None
+        self,
+        spec: Any,
+        parent_mega_mock: _MegaMockMixin | None,
+        name: str | None,
     ) -> str:
+        mock_name = ""
+        if spec is None:
+            mock_name = "MegaMock()"
         if parent_mega_mock is not None:
-            mock_name = parent_mega_mock.megamock.name or "MegaMock"
-            if name is None:
-                mock_name += "()"
-            else:
-                mock_name += "." + name
-        else:
-            if spec is None:
-                mock_name = "MegaMock()"
-            else:
-                mock_name = ""
+            mock_name = parent_mega_mock.megamock.name or "MegaMock()"
+            mock_name += f".{name}" if name else "()"
         try:
             if spec is not None:
                 spec_name = getattr(spec, "__name__", None)
@@ -273,6 +272,8 @@ class _MegaMockMixin(Generic[T, U]):
                         mock_name += "."
                     mock_name += spec_name
                 else:
+                    if mock_name:
+                        mock_name += " -> "
                     mock_name += spec.__class__.__name__
         except AttributeError:
             mock_name += "mock"
@@ -311,7 +312,9 @@ class _MegaMockMixin(Generic[T, U]):
                     mock.NonCallableMagicMock | mock.NonCallableMock,
                 ):
                     val = self._mock_return_value_cache = MegaMock.from_legacy_mock(
-                        self._mock_return_value_, None, self.megamock.wraps
+                        self._mock_return_value_,
+                        None,
+                        self.megamock.wraps,
                     )
                 else:
                     val = self._mock_return_value_cache = self._mock_return_value_
@@ -343,11 +346,19 @@ class _MegaMockMixin(Generic[T, U]):
             ):
                 mega_result = MegaMock.from_legacy_mock(
                     result,
-                    getattr(self.megamock.spec, key, None),
+                    getattr(self.megamock.spec, key, self.megamock.spec),
                     self.megamock.wraps,
                     parent_megamock=self,
                 )
+                if key == "_mock_return_value":
+                    mega_result.megamock.name = f"{self.megamock.name}()"
+                else:
+                    mega_result.megamock.name = f"{self.megamock.name}.{key}"
                 setattr(wrapped, key, mega_result)
+                if self._linked_mock:
+                    mega_result.__dict__["_linked_mock"] = getattr(
+                        self._linked_mock, key
+                    )
                 return mega_result
             return result
         if not self.megamock.spec and not self.megamock.wraps:
@@ -718,16 +729,60 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             if self._linked_mock is not None:
                 # why is the mock not called as a bound method
                 return self._linked_mock(self, *args, **kwargs)
+                # return self._linked_mock(*args, **kwargs)
             result = wrapped(*args, **kwargs)
+            self._validate_spec_was_callable()
             if not isinstance(result, _MegaMockMixin) and isinstance(
                 result, mock.NonCallableMock | mock.NonCallableMagicMock
             ):
+                call_spec = self._get_call_spec()
                 mega_result = MegaMock.from_legacy_mock(
-                    result, None, self.megamock.wraps, parent_megamock=self
+                    result, call_spec, self.megamock.wraps, parent_megamock=self
                 )
                 return mega_result
             return result
         return super().__call__(*args, **kwargs)
+
+    def _validate_spec_was_callable(self) -> None:
+        if self.megamock.wraps is not None:
+            return
+        if self.megamock.spec is None:
+            return
+        # if self.megamock._wrapped_mock is not None:
+        #     if self.megamock.instance and not getattr(
+        #         self, "_mock_return_value_", None
+        #     ):
+        #         if not _instance_callable(self.megamock.spec):
+        #             raise TypeError(f"{self.megamock.spec} is not callable")
+        #     else:
+        if not callable(self.megamock.spec):
+            raise TypeError(f"{self.megamock.spec} is not callable")
+
+        # if not self.megamock.spec:
+        #     return
+        # # if spec is a type, check if the instance is callable
+        # if not hasattr(self.megamock.spec, "__call__"):
+        #     raise TypeError(f"{self.megamock.spec} is not callable")
+        # if not callable(self.megamock.spec):
+        #     raise TypeError(f"{self.megamock.spec} is not callable")
+        # # if the spec is a Union
+        # if (
+        #     typing.get_origin(self.megamock.spec) == typing.Union
+        # ):
+        #     if not any(callable(t) for t in self.megamock.spec.__args__):
+        #         raise TypeError(f"{self.megamock.spec} is not callable")
+
+    def _get_call_spec(self) -> Any:
+
+        if self.megamock.spec is None:
+            return None
+        annotations = self.megamock.spec.__annotations__
+        return_type = annotations.get("return", None)
+        return create_autospec(return_type, instance=True)
+        return return_type
+        # if return_type is None:
+        #     return None
+        # if isinstance(return_type, typing.Union):
 
 
 class NonCallableMegaMock(
