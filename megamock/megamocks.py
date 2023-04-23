@@ -355,10 +355,6 @@ class _MegaMockMixin(Generic[T, U]):
                 else:
                     mega_result.megamock.name = f"{self.megamock.name}.{key}"
                 setattr(wrapped, key, mega_result)
-                if self._linked_mock:
-                    mega_result.__dict__["_linked_mock"] = getattr(
-                        self._linked_mock, key
-                    )
                 return mega_result
             return result
         if not self.megamock.spec and not self.megamock.wraps:
@@ -729,7 +725,6 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             if self._linked_mock is not None:
                 # why is the mock not called as a bound method
                 return self._linked_mock(self, *args, **kwargs)
-                # return self._linked_mock(*args, **kwargs)
             result = wrapped(*args, **kwargs)
             self._validate_spec_was_callable()
             if not isinstance(result, _MegaMockMixin) and isinstance(
@@ -752,7 +747,9 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             raise TypeError(f"{self.megamock.spec} is not callable")
 
     def _get_call_spec(self) -> Any:
-
+        """
+        Determine what the spec is for a function's return based on the annnotations
+        """
         if self.megamock.spec is None:
             return None
         annotations = self.megamock.spec.__annotations__

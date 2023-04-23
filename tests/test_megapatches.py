@@ -297,6 +297,7 @@ class TestMegaPatchReturnValue:
 
         assert Foo("s").some_method() == "value"
 
+    # https://github.com/JamesHutchison/megamock/issues/75
     @pytest.mark.xfail
     def test_using_actual_thing_to_enable_real_logic(self) -> None:
         # must use the mock to assign real logic

@@ -318,14 +318,6 @@ class MegaPatch(Generic[T, U]):
             return References.get_original_name(module_name, passed_in_name)
         return qualname
 
-    # @staticmethod
-    # def _maybe_correct_return_value_spec(new: Any, return_value: Any) -> None:
-    #     # Fix spec for Foo() -> instance of Foo
-    #     if isinstance(new, MegaMock):
-    #         if isinstance(return_value, _MegaMockMixin):
-    #             if return_value.megamock.spec is None:
-    #                 return_value.megamock.spec = new.megamock.spec
-
     @staticmethod
     def _maybe_assign_link(
         parent_mock: _MegaMockMixin | None, passed_in_name: str, mega_patch: MegaPatch
@@ -339,13 +331,6 @@ class MegaPatch(Generic[T, U]):
                 )._megalink_to(mega_patch.mock)
             except ValueError:
                 pass  # not a mock
-        # elif mega_patch.new_value_is_mock() and hasattr(mega_patch.mock, "megamock"):
-        #     assert passed_in_name
-        #     this_name = passed_in_name.split(".")[-1]
-        #     if this_name == passed_in_name and inspect.isclass(
-        #         mega_patch.mock.megamock.spec
-        #     ):
-        #         cast(MegaMock, mega_patch.megainstance)._megalink_to(mega_patch.mock)
 
     @staticmethod
     def _new_return_value(
