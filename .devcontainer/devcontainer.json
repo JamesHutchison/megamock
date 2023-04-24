@@ -18,7 +18,8 @@
 		"vscode": {
 			"extensions": [
 				"ms-python.python",
-				"tamasfe.even-better-toml"
+				"tamasfe.even-better-toml",
+				"stkb.rewrap"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/workspaces/python/.venv/python"
