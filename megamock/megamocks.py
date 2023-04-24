@@ -350,6 +350,8 @@ class _MegaMockMixin(Generic[T, U]):
                     self.megamock.wraps,
                     parent_megamock=self,
                 )
+                # return_value is referenced when a call is made.
+                # This actually accesses _mock_return_value
                 if key == "_mock_return_value":
                     mega_result.megamock.name = f"{self.megamock.name}()"
                 else:
@@ -739,6 +741,25 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         return super().__call__(*args, **kwargs)
 
     def _validate_spec_was_callable(self) -> None:
+        """
+        The create_autospec functionality properly creates a non-callable mock object.
+        So, for example, MegaMock.it(Foo) properly indicates that the instance Foo is
+        not callable.
+
+        However, a nested call to a non-callable mock object will not be properly
+        indicated as non-callable. For example, if we have a class Foo with a mocked
+        method that returns a non-callable Bar, then the autospec'ed object will create
+        a callable mock object in place of a mock Bar.
+
+        In this case, _get_call_spec is used to give the mocked method a spec for a Bar
+        instance, based on the return type annotation. This function then checks that
+        spec and enforces the callability of it.
+
+        In other words:
+
+        MegaMock.it(Foo)()  <-- _validate_spec_was_callable is not needed
+        MegaMock.it(Foo).do_something()() <-- _validate_spec_was_callable is needed
+        """
         if self.megamock.wraps is not None:
             return
         if self.megamock.spec is None:
@@ -748,12 +769,20 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
 
     def _get_call_spec(self) -> Any:
         """
-        Determine what the spec is for a function's return based on the annnotations
+        Determine what the spec is for a function's return based on the annnotations.
+
+        This is used to a create a mock object with the same traits as the spec.
         """
         if self.megamock.spec is None:
             return None
-        annotations = self.megamock.spec.__annotations__
+        if isclass(self.megamock.spec) and hasattr(self.megamock.spec, "__call__"):
+            spec = self.megamock.spec.__call__
+        else:
+            spec = self.megamock.spec
+        annotations = getattr(spec, "__annotations__", {})
         return_type = annotations.get("return", None)
+        if return_type is None:
+            return None
         return create_autospec(return_type, instance=True)
 
 

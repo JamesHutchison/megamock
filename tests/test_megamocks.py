@@ -616,3 +616,22 @@ class TestMegaMock:
 
             with mega_mock as val:
                 assert val == "foo"
+
+    class TestGetCallSpec:
+        def test_when_annotations_are_missing(self) -> None:
+            mock = MegaMock.it(object())
+            assert mock._get_call_spec() is None
+
+        def test_when_return_annotation_not_provided(self) -> None:
+            def some_func(arg: str):
+                return "foo"
+
+            mock = MegaMock.it(some_func)
+            assert mock._get_call_spec() is None
+
+        def test_when_annotations_are_provided(self) -> None:
+            def some_func(arg: str) -> str:
+                return "foo"
+
+            mock = MegaMock.it(some_func)
+            assert not callable(mock._get_call_spec())
