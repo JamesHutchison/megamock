@@ -84,12 +84,15 @@ class MegaPatch(Generic[T, U]):
     def new_value(self) -> MegaMock[T, U] | Any:
         return self._new_value
 
+    def new_value_is_mock(self) -> bool:
+        val = self.new_value
+        return isinstance(val, MegaMock) or hasattr(val, "return_value")
+
     @property
     def mock(self) -> MegaMock[T, U]:
-        val = self.new_value
-        if not isinstance(val, MegaMock) and not hasattr(val, "return_value"):
-            raise ValueError(f"New value {val!r} is not a mock!")
-        return val
+        if not self.new_value_is_mock():
+            raise ValueError(f"New value {self.new_value!r} is not a mock!")
+        return self.new_value
 
     @property
     def megainstance(self) -> U:

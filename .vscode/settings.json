@@ -11,5 +11,6 @@
     "python.linting.flake8Enabled": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": true
-    }
+    },
+    "rewrap.wrappingColumn": 88
 }
