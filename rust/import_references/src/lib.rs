@@ -2,9 +2,7 @@ use defaultdict::DefaultHashMap;
 use once_cell::sync::Lazy;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use pyo3::Python;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, MutexGuard};
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
@@ -19,7 +17,7 @@ impl IntoPy<PyObject> for ModAndName {
             let module_obj = self.module.into_py(py);
             let name_obj = self.name.into_py(py);
 
-            return PyTuple::new(py, vec![module_obj, name_obj]).into();
+            PyTuple::new(py, vec![module_obj, name_obj]).into()
         })
     }
 }
@@ -43,9 +41,8 @@ impl References {
     #[new]
     fn new() -> References {
         References {
-            references: DefaultHashMap::<String, HashMap<String, ModAndName>>::new(),
-            reverse_references:
-                DefaultHashMap::<String, DefaultHashMap<String, HashSet<ModAndName>>>::new(),
+            references: DefaultHashMap::new(),
+            reverse_references: DefaultHashMap::new(),
             renames: HashMap::new(),
         }
     }
@@ -76,7 +73,7 @@ impl References {
         references
             .entry(calling_module_name.clone())
             .and_modify(|references_entry| {
-                references_entry.insert(named_as.to_owned(), mod_and_name.clone());
+                references_entry.insert(named_as.to_owned(), mod_and_name);
             });
 
         let base_original_name = original_name.split('.').next().unwrap().to_owned();
@@ -112,19 +109,17 @@ impl References {
     pub fn get_references(module_name: &str, named_as: &str) -> PyResult<Vec<PyObject>> {
         let references = &get_instance().references;
         let module_name_str = module_name.to_owned();
-        if (references.contains_key(&module_name_str)) == false {
+        if !references.contains_key(&module_name_str) {
             return Ok(Vec::new());
         }
         let references_dict = references.get(&module_name_str);
         let named_as_str = named_as.to_owned();
         let val = match references_dict.get(&named_as_str) {
             Some(val) => val.clone(),
-            None => {
-                return Ok(Vec::new());
-            }
+            None => return Ok(Vec::new()),
         };
 
-        Python::with_gil(|py| Ok(vec![(val).into_py(py)]))
+        Python::with_gil(|py| Ok(vec![val.into_py(py)]))
     }
 
     #[staticmethod]
@@ -143,13 +138,13 @@ impl References {
         let reverse_references = &get_instance().reverse_references;
 
         let module_name_str = module_name.to_owned();
-        if (reverse_references.contains_key(&module_name_str)) == false {
+        if !reverse_references.contains_key(&module_name_str) {
             return Ok(Vec::new());
         }
         let reverse_references_dict = reverse_references.get(&module_name_str);
 
         let base_name_str = base_name.to_owned();
-        if (reverse_references_dict.contains_key(&base_name_str)) == false {
+        if !reverse_references_dict.contains_key(&base_name_str) {
             return Ok(Vec::new());
         }
         let reverse_references_set = reverse_references_dict.get(&base_name_str);
