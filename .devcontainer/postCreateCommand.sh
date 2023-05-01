@@ -10,3 +10,6 @@ pip install poetry
 
 poetry config virtualenvs.in-project true
 poetry install
+
+# install rust
+curl https://sh.rustup.rs -sSf | sh -s -- -y

@@ -19,7 +19,8 @@
 			"extensions": [
 				"ms-python.python",
 				"tamasfe.even-better-toml",
-				"stkb.rewrap"
+				"stkb.rewrap",
+				"rust-lang.rust-analyzer"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/workspaces/python/.venv/python"
