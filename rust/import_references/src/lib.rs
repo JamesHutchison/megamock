@@ -71,26 +71,17 @@ impl References {
             .extract::<String>()
             .unwrap();
         let references = &mut instance.references;
-        references
-            .entry(calling_module_name.clone())
-            .and_modify(|references_entry| {
-                references_entry.insert(named_as.to_owned(), mod_and_name);
-            });
+        let references_entry = references.get_mut(&calling_module_name);
+        references_entry.insert(named_as.to_owned(), mod_and_name);
 
         let base_original_name = original_name.split('.').next().unwrap().to_owned();
         let reverse_references = &mut instance.reverse_references;
-        reverse_references
-            .entry(module_path)
-            .and_modify(|reverse_references_entry| {
-                reverse_references_entry
-                    .entry(base_original_name)
-                    .and_modify(|set| {
-                        set.insert(ModAndName {
-                            module: calling_module_name.clone(),
-                            name: named_as.to_owned(),
-                        });
-                    });
-            });
+        let reverse_references_entry = reverse_references.get_mut(&module_path);
+        let set = reverse_references_entry.get_mut(&base_original_name);
+        set.insert(ModAndName {
+            module: calling_module_name.clone(),
+            name: named_as.to_owned(),
+        });
 
         if original_name != named_as {
             let renames_dict = &mut instance.renames;
@@ -128,7 +119,9 @@ impl References {
 
     #[staticmethod]
     pub fn get_reverse_references(module_name: &str, original_name: &str) -> PyResult<PyObject> {
-        let components: Vec<&str> = original_name.split('.').collect();
+        // reproducing existing bug where name isn't split
+        let components = vec![original_name];
+        // let components: Vec<&str> = original_name.split('.').collect();
         let base_name = components[0];
         let right_side = if components.len() > 1 {
             components[1..].join(".")
@@ -187,7 +180,7 @@ impl References {
         let references = &get_instance().references;
         return Python::with_gil(|py| {
             let ret_dict = PyDict::new(py);
-            // for (module_name, references_dict) in references.iter() {
+            // DefaultHashLib is missing iter()
             for module_name in references.keys() {
                 let references_dict = references.get(module_name);
                 let module_dict = PyDict::new(py);
@@ -195,6 +188,48 @@ impl References {
                     module_dict.set_item(named_as, mod_and_name.clone().into_py(py))?;
                 }
                 ret_dict.set_item(module_name, module_dict)?;
+            }
+            return Ok(ret_dict.into_py(py));
+        });
+    }
+
+    #[staticmethod]
+    fn _debug_reverse_references() -> PyResult<PyObject> {
+        let reverse_references = &get_instance().reverse_references;
+        return Python::with_gil(|py| {
+            let ret_dict = PyDict::new(py);
+            // DefaultHashLib is missing iter()
+            for module_name in reverse_references.keys() {
+                let reverse_references_dict = reverse_references.get(module_name);
+                let module_dict = PyDict::new(py);
+                // for (base_name, mod_and_name_set) in reverse_references_dict.iter() {
+                for base_name in reverse_references.keys() {
+                    let mod_and_name_set = reverse_references_dict.get(base_name);
+                    let mod_and_name_vec: Vec<PyObject> = mod_and_name_set
+                        .iter()
+                        .map(|mod_and_name| mod_and_name.clone().into_py(py))
+                        .collect();
+                    let mod_and_name_set = PySet::new(py, &mod_and_name_vec)?;
+                    module_dict.set_item(base_name, mod_and_name_set)?;
+                }
+                ret_dict.set_item(module_name, module_dict)?;
+            }
+            return Ok(ret_dict.into_py(py));
+        });
+    }
+
+    #[staticmethod]
+    fn _debug_renames() -> PyResult<PyObject> {
+        let renames = &get_instance().renames;
+        return Python::with_gil(|py| {
+            let ret_dict = PyDict::new(py);
+            // DefaultHashLib is missing iter()
+            for mod_and_name in renames.keys() {
+                let original_name = renames.get(mod_and_name);
+                ret_dict.set_item(
+                    mod_and_name.clone().into_py(py),
+                    original_name.clone().into_py(py),
+                )?;
             }
             return Ok(ret_dict.into_py(py));
         });
