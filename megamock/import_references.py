@@ -106,7 +106,8 @@ class References:
         return References.renames.get(ModAndName(module_name, named_as), named_as)
 
 
-try:
-    from _megamock import References  # type: ignore # noqa
-except ImportError:
-    pass
+# Rust code is slower than Python equivalent
+# try:
+#     from _megamock import References  # type: ignore # noqa
+# except ImportError:
+#     pass
