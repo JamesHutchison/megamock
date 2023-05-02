@@ -6,26 +6,29 @@ from megamock import MegaPatch
 from megamock.megamocks import NonCallableMegaMock, UseRealLogic
 from megamock.megapatches import MegaMock
 from megamock.megas import Mega
-from tests.simple_app import bar as other_bar
-from tests.simple_app import foo, nested_classes
-from tests.simple_app.async_portion import SomeClassWithAsyncMethods, an_async_function
-from tests.simple_app.bar import Bar, some_context_manager
-from tests.simple_app.bar import some_func
-from tests.simple_app.bar import some_func as some_other_func
-from tests.simple_app.does_rename import func_that_uses_foo as func_uses_foo
-from tests.simple_app.foo import Foo
-from tests.simple_app.foo import Foo as OtherFoo
-from tests.simple_app.foo import bar
-from tests.simple_app.foo import bar as other_bar_constant
-from tests.simple_app.foo import foo_instance
-from tests.simple_app.helpful_manager import HelpfulManager
-from tests.simple_app.locks import SomeLock
-from tests.simple_app.nested_classes import NestedParent
-from tests.simple_app.uses_nested_classes import get_nested_class_attribute_value
-from tests.simple_app.uses_nested_classes import (
+from tests.unit.simple_app import bar as other_bar
+from tests.unit.simple_app import foo, nested_classes
+from tests.unit.simple_app.async_portion import (
+    SomeClassWithAsyncMethods,
+    an_async_function,
+)
+from tests.unit.simple_app.bar import Bar, some_context_manager
+from tests.unit.simple_app.bar import some_func
+from tests.unit.simple_app.bar import some_func as some_other_func
+from tests.unit.simple_app.does_rename import func_that_uses_foo as func_uses_foo
+from tests.unit.simple_app.foo import Foo
+from tests.unit.simple_app.foo import Foo as OtherFoo
+from tests.unit.simple_app.foo import bar
+from tests.unit.simple_app.foo import bar as other_bar_constant
+from tests.unit.simple_app.foo import foo_instance
+from tests.unit.simple_app.helpful_manager import HelpfulManager
+from tests.unit.simple_app.locks import SomeLock
+from tests.unit.simple_app.nested_classes import NestedParent
+from tests.unit.simple_app.uses_nested_classes import get_nested_class_attribute_value
+from tests.unit.simple_app.uses_nested_classes import (
     get_nested_class_attribute_value as another_nested_class_attr,
 )
-from tests.simple_app.uses_nested_classes import get_nested_class_function_value
+from tests.unit.simple_app.uses_nested_classes import get_nested_class_function_value
 
 
 class TestMegaPatchPatching:
@@ -145,7 +148,7 @@ class TestMegaPatchPatching:
         func_uses_foo() == "it worked"
 
     def test_patch_that_is_renamed_in_non_test_module_2(self) -> None:
-        from tests.simple_app.does_rename import MyFoo
+        from tests.unit.simple_app.does_rename import MyFoo
 
         patch = MegaPatch.it(MyFoo)
         patch.megainstance.some_method.return_value = "it worked"

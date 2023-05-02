@@ -15,10 +15,10 @@ from megamock.megamocks import (
 )
 from megamock.megapatches import MegaPatch
 from megamock.megas import Mega
-from tests.conftest import SomeClass
-from tests.simple_app.bar import Bar
-from tests.simple_app.foo import Foo
-from tests.simple_app.nested_classes import NestedParent
+from tests.unit.conftest import SomeClass
+from tests.unit.simple_app.bar import Bar
+from tests.unit.simple_app.foo import Foo
+from tests.unit.simple_app.nested_classes import NestedParent
 
 
 class TestAttributeTrackingBase:
