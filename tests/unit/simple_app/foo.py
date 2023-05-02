@@ -1,6 +1,6 @@
 from functools import cached_property
 
-from tests.simple_app.helpful_manager import HelpfulManager
+from tests.unit.simple_app.helpful_manager import HelpfulManager
 
 bar = "bar"
 

@@ -1,4 +1,4 @@
-from tests.simple_app.nested_classes import NestedParent
+from tests.unit.simple_app.nested_classes import NestedParent
 
 
 def get_nested_class_function_value() -> str:
