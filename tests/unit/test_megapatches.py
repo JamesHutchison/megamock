@@ -275,11 +275,21 @@ class TestMegaPatchReturnValue:
 
         assert patch.return_value is ret_val
 
-    def test_patch_return_value_is_not_assignable(self) -> None:
+    def test_assigning_patch_return_value_directly(self) -> None:
         patch = MegaPatch.it(Foo)
 
-        with pytest.raises(AttributeError):
-            patch.return_value = 5  # type: ignore
+        patch.return_value = 5
+
+        assert Foo("s") == 5
+        assert patch.return_value == 5
+
+    def test_assigning_patch_return_value_directly_on_method(self) -> None:
+        patch = MegaPatch.it(Foo.some_method)
+
+        patch.return_value = 5
+
+        assert Foo("s").some_method() == 5
+        assert patch.return_value == 5
 
     def test_return_value_has_changable_return_value(self) -> None:
         patch = MegaPatch.it(Bar)

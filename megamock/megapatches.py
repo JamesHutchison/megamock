@@ -102,6 +102,11 @@ class MegaPatch(Generic[T, U]):
     def return_value(self) -> MegaMock[T, U]:
         return cast(MegaMock[T, U], self._return_value)
 
+    @return_value.setter
+    def return_value(self, new_value: MegaMock[T, U]) -> None:
+        self._return_value = new_value
+        self._new_value.return_value = new_value
+
     def set_context_manager_return_value(self, new_return_value: Any) -> None:
         """
         Use to modify the result of entering a context manager
