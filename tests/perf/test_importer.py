@@ -13,7 +13,7 @@ def test_importer_perf() -> None:
         generate_modules(modules_path, 1000)
     start_time = time.time()
 
-    import generated_modules.import_generated_modules as import_generated_modules  # noqa
+    import generated_modules.import_generated_modules as import_generated_modules  # type: ignore # noqa
 
     end_time = time.time()
 

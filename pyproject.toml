@@ -39,3 +39,6 @@ asyncio_mode = "auto"
 
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+exclude = ["generated_modules"]
