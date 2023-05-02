@@ -1,12 +1,16 @@
 import builtins
 import inspect
 import linecache
+import os
 import re
 import sys
+import time
 from types import FrameType, ModuleType
 from typing import Callable
 
 from megamock.import_references import References
+
+MEASURE_TIMES = os.environ.get("MEASURE_TIMES", "0") == "1"
 
 orig_import = builtins.__import__
 
@@ -15,6 +19,37 @@ skip_modules = {
     "functools",
     "asttokens",
 }
+
+perf_stats = {
+    "num_imports": 0,
+    "total_orig_import": 0.0,
+    "total_if_check": 0.0,
+    "total_get_frame": 0.0,
+    "total_reconstruct": 0.0,
+    "total_renamed_to": 0.0,
+    "total_add_reference": 0.0,
+}
+perf_start_time = 0.0
+
+
+if MEASURE_TIMES:
+
+    def measure_start() -> None:
+        global perf_start_time
+        perf_start_time = time.time()
+
+    def measure(name: str) -> None:
+        global perf_start_time
+        perf_stats[name] += time.time() - perf_start_time
+
+else:
+
+    def measure_start() -> None:
+        pass
+
+    def measure(name: str) -> None:
+        pass
+
 
 pat = re.compile(r"^(\s*def\s)|(\s*async\s+def\s)|(.*(?<!\w)lambda(:|\s))|^(\s*@)")
 
@@ -104,16 +139,24 @@ def start_import_mod() -> None:
     """
 
     def new_import(*args, **kwargs) -> ModuleType:
+        perf_stats["num_imports"] += 1
+        measure_start()
         result = orig_import(*args, **kwargs)
+        measure("total_orig_import")
 
+        measure_start()
         module_name = args[0]
-        if (
+        proceed = (
             module_name not in skip_modules
             and not module_name.startswith("_")
             and (target_module := sys.modules.get(module_name))
             and len(args) > 3
             and (names := args[3])
-        ):
+        )
+        assert target_module is not None
+        measure("total_if_check")
+        if proceed:
+            measure_start()
             for i in range(1, 5):
                 frame = sys._getframe(i)
                 if frame.f_code.co_name == "new_import":
@@ -121,9 +164,13 @@ def start_import_mod() -> None:
                 calling_module = inspect.getmodule(frame)
                 if calling_module:
                     break
+            measure("total_get_frame")
             assert calling_module
+            measure_start()
             full_line = _reconstruct_full_line(frame)
+            measure("total_reconstruct")
             for k in names:
+                measure_start()
                 if full_line and (
                     has_rename_regex.search(full_line)
                     and (
@@ -137,7 +184,10 @@ def start_import_mod() -> None:
                     renamed_to = renamed_result.group(1)
                 else:
                     renamed_to = k
+                measure("total_renamed_to")
+                measure_start()
                 References.add_reference(target_module, calling_module, k, renamed_to)
+                measure("total_add_reference")
 
         return result
 
