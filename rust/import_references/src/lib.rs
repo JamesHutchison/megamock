@@ -1,7 +1,7 @@
 use defaultdict::DefaultHashMap;
 use once_cell::sync::Lazy;
 use pyo3::prelude::*;
-use pyo3::types::PyTuple;
+use pyo3::types::{PyDict, PySet, PyTuple};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, MutexGuard};
 
@@ -54,6 +54,7 @@ impl References {
         original_name: &str,
         named_as: &str,
     ) -> PyResult<()> {
+        let instance = &mut get_instance();
         let module_path = module
             .getattr("__name__")
             .unwrap()
@@ -69,7 +70,7 @@ impl References {
             .unwrap()
             .extract::<String>()
             .unwrap();
-        let references = &mut get_instance().references;
+        let references = &mut instance.references;
         references
             .entry(calling_module_name.clone())
             .and_modify(|references_entry| {
@@ -77,7 +78,7 @@ impl References {
             });
 
         let base_original_name = original_name.split('.').next().unwrap().to_owned();
-        let reverse_references = &mut get_instance().reverse_references;
+        let reverse_references = &mut instance.reverse_references;
         reverse_references
             .entry(module_path)
             .and_modify(|reverse_references_entry| {
@@ -92,7 +93,7 @@ impl References {
             });
 
         if original_name != named_as {
-            let renames_dict = &mut get_instance().renames;
+            let renames_dict = &mut instance.renames;
             renames_dict.insert(
                 ModAndName {
                     module: calling_module_name.clone(),
@@ -106,27 +107,27 @@ impl References {
     }
 
     #[staticmethod]
-    pub fn get_references(module_name: &str, named_as: &str) -> PyResult<Vec<PyObject>> {
+    pub fn get_references(module_name: &str, named_as: &str) -> PyResult<PyObject> {
         let references = &get_instance().references;
         let module_name_str = module_name.to_owned();
         if !references.contains_key(&module_name_str) {
-            return Ok(Vec::new());
+            return Python::with_gil(|py| Ok(PySet::empty(py)?.into_py(py)));
         }
         let references_dict = references.get(&module_name_str);
         let named_as_str = named_as.to_owned();
         let val = match references_dict.get(&named_as_str) {
             Some(val) => val.clone(),
-            None => return Ok(Vec::new()),
+            None => return Python::with_gil(|py| Ok(PySet::empty(py)?.into_py(py))),
         };
 
-        Python::with_gil(|py| Ok(vec![val.into_py(py)]))
+        Python::with_gil(|py| {
+            let ret_set = PySet::new(py, &vec![val.into_py(py)])?;
+            return Ok(ret_set.into_py(py));
+        })
     }
 
     #[staticmethod]
-    pub fn get_reverse_references(
-        module_name: &str,
-        original_name: &str,
-    ) -> PyResult<Vec<ModAndName>> {
+    pub fn get_reverse_references(module_name: &str, original_name: &str) -> PyResult<PyObject> {
         let components: Vec<&str> = original_name.split('.').collect();
         let base_name = components[0];
         let right_side = if components.len() > 1 {
@@ -139,30 +140,32 @@ impl References {
 
         let module_name_str = module_name.to_owned();
         if !reverse_references.contains_key(&module_name_str) {
-            return Ok(Vec::new());
+            return Python::with_gil(|py| Ok(PySet::empty(py)?.into_py(py)));
         }
         let reverse_references_dict = reverse_references.get(&module_name_str);
 
         let base_name_str = base_name.to_owned();
         if !reverse_references_dict.contains_key(&base_name_str) {
-            return Ok(Vec::new());
+            return Python::with_gil(|py| Ok(PySet::empty(py)?.into_py(py)));
         }
         let reverse_references_set = reverse_references_dict.get(&base_name_str);
 
-        let result: Vec<ModAndName> = reverse_references_set
-            .iter()
-            .map(|mod_and_name| {
-                let module = mod_and_name.module.clone();
-                let name = if !right_side.is_empty() {
-                    format!("{}.{}", mod_and_name.name.clone(), right_side)
-                } else {
-                    mod_and_name.name.clone()
-                };
-                ModAndName { module, name }
-            })
-            .collect();
-
-        Ok(result)
+        return Python::with_gil(|py| {
+            let result: Vec<PyObject> = reverse_references_set
+                .iter()
+                .map(|mod_and_name| {
+                    let module = mod_and_name.module.clone();
+                    let name = if !right_side.is_empty() {
+                        format!("{}.{}", mod_and_name.name.clone(), right_side)
+                    } else {
+                        mod_and_name.name.clone()
+                    };
+                    ModAndName { module, name }.into_py(py)
+                })
+                .collect();
+            let ret_set = PySet::new(py, &result)?;
+            return Ok(ret_set.into_py(py));
+        });
     }
 
     #[staticmethod]
@@ -178,10 +181,28 @@ impl References {
 
         Ok(original_name)
     }
+
+    #[staticmethod]
+    fn _debug_references() -> PyResult<PyObject> {
+        let references = &get_instance().references;
+        return Python::with_gil(|py| {
+            let ret_dict = PyDict::new(py);
+            // for (module_name, references_dict) in references.iter() {
+            for module_name in references.keys() {
+                let references_dict = references.get(module_name);
+                let module_dict = PyDict::new(py);
+                for (named_as, mod_and_name) in references_dict.iter() {
+                    module_dict.set_item(named_as, mod_and_name.clone().into_py(py))?;
+                }
+                ret_dict.set_item(module_name, module_dict)?;
+            }
+            return Ok(ret_dict.into_py(py));
+        });
+    }
 }
 
 #[pymodule]
-fn megamock_import_references(_py: Python, m: &PyModule) -> PyResult<()> {
+fn _megamock(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<References>()?;
     Ok(())
 }

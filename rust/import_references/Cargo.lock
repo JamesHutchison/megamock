@@ -49,8 +49,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "mega-mock"
-version = "0.1.0"
+name = "megamock"
+version = "0.1.0-beta.2"
 dependencies = [
  "defaultdict",
  "once_cell",
