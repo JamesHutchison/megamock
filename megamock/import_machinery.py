@@ -93,6 +93,9 @@ def _reconstruct_full_line(
     return ""
 
 
+has_rename_regex = re.compile(r"\s*from \S+ import.*\s+as\s", re.DOTALL)
+
+
 def start_import_mod() -> None:
     """
     Start the import modification
@@ -111,7 +114,6 @@ def start_import_mod() -> None:
             and len(args) > 3
             and (names := args[3])
         ):
-            stack = inspect.stack()
             for i in range(1, 5):
                 frame = sys._getframe(i)
                 if frame.f_code.co_name == "new_import":
@@ -123,8 +125,13 @@ def start_import_mod() -> None:
             full_line = _reconstruct_full_line(frame)
             for k in names:
                 if full_line and (
-                    renamed_result := re.search(
-                        r"\s*from \S+ import.*\s+as\s+(\w+)", full_line, re.DOTALL
+                    has_rename_regex.search(full_line)
+                    and (
+                        renamed_result := re.search(
+                            rf"\s*from \S+ import.*{k}\s+as\s+(\w+)",
+                            full_line,
+                            re.DOTALL,
+                        )
                     )
                 ):
                     renamed_to = renamed_result.group(1)
