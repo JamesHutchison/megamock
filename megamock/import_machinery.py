@@ -153,9 +153,9 @@ def start_import_mod() -> None:
             and len(args) > 3
             and (names := args[3])
         )
-        assert target_module is not None
         measure("total_if_check")
         if proceed:
+            assert target_module is not None
             measure_start()
             for i in range(1, 5):
                 frame = sys._getframe(i)
