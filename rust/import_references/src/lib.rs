@@ -3,19 +3,19 @@ use once_cell::sync::Lazy;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PySet, PyTuple};
 use std::collections::{HashMap, HashSet};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 struct ModAndName {
-    module: String,
-    name: String,
+    module: Arc<String>,
+    name: Arc<String>,
 }
 
 impl IntoPy<PyObject> for ModAndName {
     fn into_py(self, _py: Python) -> PyObject {
         Python::with_gil(|py| {
-            let module_obj = self.module.into_py(py);
-            let name_obj = self.name.into_py(py);
+            let module_obj = (*self.module).clone().into_py(py);
+            let name_obj = (*self.name).clone().into_py(py);
 
             PyTuple::new(py, vec![module_obj, name_obj]).into()
         })
@@ -55,24 +55,18 @@ impl References {
         named_as: &str,
     ) -> PyResult<()> {
         let instance = &mut get_instance();
-        let module_path = module
-            .getattr("__name__")
-            .unwrap()
-            .extract::<String>()
-            .unwrap();
+        let module_path = Arc::new(module.getattr("__name__")?.extract::<String>()?);
         let mod_and_name = ModAndName {
             module: module_path.clone(),
-            name: original_name.to_owned(),
+            name: Arc::new(original_name.to_owned()),
         };
+        let named_as_arc = Arc::new(named_as.to_owned());
 
-        let calling_module_name = calling_module
-            .getattr("__name__")
-            .unwrap()
-            .extract::<String>()
-            .unwrap();
+        let calling_module_name =
+            Arc::new(calling_module.getattr("__name__")?.extract::<String>()?);
         let references = &mut instance.references;
         let references_entry = references.get_mut(&calling_module_name);
-        references_entry.insert(named_as.to_owned(), mod_and_name);
+        references_entry.insert((*named_as_arc).clone(), mod_and_name);
 
         let base_original_name = original_name.split('.').next().unwrap().to_owned();
         let reverse_references = &mut instance.reverse_references;
@@ -80,7 +74,7 @@ impl References {
         let set = reverse_references_entry.get_mut(&base_original_name);
         set.insert(ModAndName {
             module: calling_module_name.clone(),
-            name: named_as.to_owned(),
+            name: named_as_arc.clone(),
         });
 
         if original_name != named_as {
@@ -88,7 +82,7 @@ impl References {
             renames_dict.insert(
                 ModAndName {
                     module: calling_module_name.clone(),
-                    name: named_as.to_owned(),
+                    name: named_as_arc.clone(),
                 },
                 original_name.to_owned(),
             );
@@ -149,11 +143,17 @@ impl References {
                 .map(|mod_and_name| {
                     let module = mod_and_name.module.clone();
                     let name = if !right_side.is_empty() {
-                        format!("{}.{}", mod_and_name.name.clone(), right_side)
+                        format!("{}.{}", (*mod_and_name.name).clone(), right_side)
                     } else {
-                        mod_and_name.name.clone()
+                        (*mod_and_name.name).clone()
                     };
-                    ModAndName { module, name }.into_py(py)
+                    let name_arc = Arc::new(name);
+                    let ret = ModAndName {
+                        module,
+                        name: name_arc,
+                    }
+                    .into_py(py);
+                    return ret;
                 })
                 .collect();
             let ret_set = PySet::new(py, &result)?;
@@ -165,8 +165,8 @@ impl References {
     fn get_original_name(module_name: &str, named_as: &str) -> PyResult<String> {
         let renames_dict = &get_instance().renames;
         let original_name = match renames_dict.get(&ModAndName {
-            module: module_name.to_owned(),
-            name: named_as.to_owned(),
+            module: Arc::new(module_name.to_owned()),
+            name: Arc::new(named_as.to_owned()),
         }) {
             Some(original_name) => original_name.clone(),
             None => named_as.to_owned(),
