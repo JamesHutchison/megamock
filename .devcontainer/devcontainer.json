@@ -25,5 +25,11 @@
 				"python.defaultInterpreterPath": "/workspaces/python/.venv/python"
 			}
 		}
-	}
+	},
+	"mounts": [
+		"source=${localWorkspaceFolderBasename}-venv,target=${containerWorkspaceFolder}/.venv,type=volume",
+		"source=${localWorkspaceFolderBasename}-generated-modules,target=${containerWorkspaceFolder}/tests/generated_modules,type=volume",
+		"source=${localWorkspaceFolderBasename}-mypy-cache,target=${containerWorkspaceFolder}/.mypy_cache,type=volume",
+		"source=${localWorkspaceFolderBasename}-pytest-cache,target=${containerWorkspaceFolder}/.pytest_cache,type=volume"
+	]
 }
