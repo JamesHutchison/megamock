@@ -15,6 +15,7 @@ from megamock.megamocks import (
 )
 from megamock.megapatches import MegaPatch
 from megamock.megas import Mega
+from tests.simple_app.pydantic_objects import Child, Parent
 from tests.unit.conftest import SomeClass
 from tests.unit.simple_app.bar import Bar
 from tests.unit.simple_app.foo import Foo
@@ -268,7 +269,6 @@ class TestMegaMock:
             assert isinstance(mega_mock.return_value, NonCallableMegaMock)
 
         def test_when_regular_mock(self) -> None:
-
             legacy_mock = mock.Mock()
             legacy_mock.b = mock.Mock()
             legacy_mock.c = mock.NonCallableMock()
@@ -635,3 +635,14 @@ class TestMegaMock:
 
             mock = MegaMock.it(some_func)
             assert not callable(mock._get_call_spec())
+
+    class TestPydanticObjects:
+        @pytest.mark.xfail
+        def test_mocking_nested_attributes(self) -> None:
+            mega_mock = MegaMock.it(Parent)
+            mega_mock.child.attribute = "foo"
+
+        def test_split_out_attributes(self) -> None:
+            mega_mock = MegaMock.it(Parent)
+            mega_mock.child = MegaMock.it(Child)
+            mega_mock.child.attribute = "foo"
