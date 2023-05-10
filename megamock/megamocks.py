@@ -394,10 +394,21 @@ class _MegaMockMixin(Generic[T, U]):
                         value, mock.NonCallableMock | mock.NonCallableMagicMock
                     ):
                         allowed_values = self.megamock.spec.__annotations__[key]
-                        if not isinstance(value, allowed_values):
+
+                        def raise_type_error() -> None:
                             raise TypeError(
                                 f"{value!r} is not an instance of {allowed_values}"
                             )
+
+                        # handle:
+                        # "from __future__ import annotations" converting type to str
+                        if isinstance(allowed_values, str):
+                            if str(value.__class__.__name__) not in [
+                                x.strip() for x in allowed_values.split("|")
+                            ]:
+                                raise_type_error()
+                        elif not isinstance(value, allowed_values):
+                            raise_type_error()
                     wrapped.__dict__[key] = value
                 else:
                     raise
