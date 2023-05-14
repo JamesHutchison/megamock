@@ -2,3 +2,5 @@
 *.pyc
 .dmypy.json
 dist
+.mypy_cache
+.pytest_cache
