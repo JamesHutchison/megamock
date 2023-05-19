@@ -29,6 +29,10 @@ class References:
         original_name: str,
         named_as: str,
     ) -> None:
+        # do not bother with bad modules. Example: conftest from pytest
+        if not calling_module.__package__:
+            # this can happen if using megamock + pytest hot reloader
+            return
         module_path = module.__name__
         References.references[calling_module.__name__][named_as] = ModAndName(
             module_path,
