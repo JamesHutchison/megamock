@@ -17,3 +17,6 @@ poetry config virtualenvs.in-project true
 poetry install
 
 python tests/perf/generate_files_to_import.py
+
+mkdir -p .dev_container_logs
+echo "*" > .dev_container_logs/.gitignore
