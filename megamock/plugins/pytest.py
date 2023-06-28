@@ -4,7 +4,7 @@ import pytest
 from megamock.megapatches import MegaPatch
 
 
-def pytest_sessionstart(*args, **kwargs) -> None:
+def pytest_load_initial_conftests(*args, **kwargs) -> None:
     import megamock
 
     megamock.start_import_mod()
