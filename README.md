@@ -133,13 +133,13 @@ function prior to importing any production or test code. You will also want it s
 
 **Core Classes**
 
-`MegaMock` - the primary class for a mocked object. This is similar to `MagicMock`. Use `MegaMock.it(MyObject)` to make `MyObject` the [spec](https://docs.python.org/3/library/unittest.mock.html#unittest.mock.create_autospec).
+`MegaMock` - the primary class for a mocked object. This is similar to `MagicMock`. To create a mock instance of a class, use `MegaMock.it(MyClass)` to make `MyClass` the [spec](https://docs.python.org/3/library/unittest.mock.html#unittest.mock.create_autospec). To create mock instances of instantiated objects, functions, classes (the type), etc, use `MegaMock.this(some_object)`.
 
 `MegaPatch` - the class for patching. This is similar to `patch`. Use `MegaPath.it(MyObject)` to replace new instances of the `MyObject` class.
 
-`Mega` - helper class for accessing mock attributes without having to memorize the due to lost type inference. Use `Mega(some_megamock)`.
+`Mega` - helper class for accessing mock attributes without having to memorize them due to lost type inference. Use `Mega(some_megamock)`.
 Note that the `assert_` methods, such as `assert_called_once`, is now `called_once` and returns a boolean. The assertion error
-is stored in `Mega.last_assertion_error`.
+is stored in `Mega.last_assertion_error`. This is typically for doing asserts against mocked functions and methods.
 
 --------------------
 
@@ -169,7 +169,7 @@ def test_something(...):
     ...
 ```
 
-`MegaMock` objects have the same attributes as regular `MagicMock`s plus `megamock` and `megainstance`
+`MegaMock` objects have the same attributes as regular `MagicMock`s plus `megamock` and `megainstance`.
 For example, `my_mega_mock.megamock.spy` is the object being spied, if set. `my_class_mock.megainstance` is the instance returned when the class is instantiated.
 
 The [guidance document](GUIDANCE.md) is available to provide in-depth information on using mocking and MegaMock. Continuing reading to
@@ -195,14 +195,15 @@ mock_instance = MegaMock.it(MyClass)
 Creating a mock class itself:
 
 ```python
-mock_class = MegaMock.it(MyClass, instance=False)
+mock_class = MegaMock.this(MyClass)
+func_that_wants_a_type(mock_class)
 ```
 
 Spying an object:
 
 ```python
 my_thing = MyClass()
-spied_class = MegaMock(spy=my_thing)
+spied_class = MegaMock.this(spy=my_thing)
 
 # ... do stuff with spied_class...
 

@@ -9,7 +9,7 @@ foo.some_method(wrong, args)  # raises error
 ```
 
 ```python
-FooMock = MegaMock.it(Foo, instance=False)  # FooMock is a type
+FooMock = MegaMock.that(Foo)  # FooMock is a type
 ```
 
 ## Patch objects by simply passing them in. Patches start automatically
@@ -48,7 +48,7 @@ Mega(my_mock.some_method).use_real_logic()
 addopts = "-p megamock.plugins.pytest"
 ```
 
-## Assert using the assert statement instead of assert functions
+## For pytest, assert using the assert statement instead of assert functions
 
 ```python
 assert Mega(my_mock.some_method).called_with(1, 2, 3)
