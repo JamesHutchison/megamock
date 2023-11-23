@@ -15,6 +15,7 @@ from typing import (
     Generic,
     Literal,
     TypeVar,
+    Union,
     cast,
     get_type_hints,
     overload,
@@ -199,7 +200,7 @@ class _MegaMockMixin(Generic[T, U]):
         :param instance: If True, the mock will be an instance of the spec. If False,
             the mock will be a class. By default this is True. This must be omitted or
             False for the AsyncMock
-        :param side_effect: The side effect to use for the mock. Exceptoins are raised,
+        :param side_effect: The side effect to use for the mock. Exceptions are raised,
             fuctions are called, and iterables are returned in order in subsequent calls
         :param return_value: The return value to use for the mock.
         :param _wraps_mock: the wrapped mock, for internal use
@@ -515,15 +516,30 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     Use: MegaMock.it(MySpecClass)
     """
 
+    # Passthrough logic for quickly casting to a MegaMock
+    def __new__(cls, _existing: _MegaMockMixin | Any = None, *args, **kwargs):
+        if hasattr(_existing, "megamock"):
+            return cast(MegaMock[T, U], _existing)
+        return super().__new__(cls, *args, **kwargs)
+
     # Types MegaMock()
     @overload
     def __init__(self: MegaMock[None, None]) -> None:
+        ...
+
+    # Types MegaMock(existing_megamock)
+    @overload
+    def __init__(
+        self: MegaMock[T, U],
+        _existing: _MegaMockMixin[T, U] | Union[_MegaMockMixin[T, U], T],
+    ) -> None:
         ...
 
     # types MegaMock(spec=SomeClass, instance=False, ...)
     @overload
     def __init__(
         self: _MegaMockMixin[T, U],
+        _existing: None = None,
         *,
         spec: type[T],
         instance: Literal[False] = False,
@@ -548,6 +564,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     @overload
     def __init__(
         self: _MegaMockMixin[T, U],
+        _existing: None = None,
         *,
         spec: T,
         _wraps_mock: (
@@ -572,6 +589,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     @overload
     def __init__(
         self: MegaMock[T, T],
+        _existing: None = None,
         *,
         _wraps_mock: (
             mock.Mock
@@ -593,6 +611,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
 
     def __init__(
         self,
+        _existing: Any | None = None,
         *,
         spec: T | type[T] | None = None,
         wraps: T | None = None,
@@ -623,13 +642,17 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         :param instance: If True, the mock will be an instance of the spec. If False,
             the mock will be a class. By default this is True. This must be omitted or
             False for the AsyncMock
-        :param side_effect: The side effect to use for the mock. Exceptoins are raised,
+        :param side_effect: The side effect to use for the mock. Exceptions are raised,
             fuctions are called, and iterables are returned in order in subsequent calls
         :param return_value: The return value to use for the mock.
         :param _wraps_mock: the wrapped mock, for internal use
         :param _parent_mega_mock: The parent MegaMock, for internal use
         """
-        return super().__init__(
+        if _existing:
+            if hasattr(_existing, "megamock"):
+                return
+            raise Exception("Use MegaMock.it(...) for new mocks, not MegaMock")
+        super().__init__(
             spec,
             wraps=wraps,
             spy=spy,
@@ -643,14 +666,20 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             **kwargs,
         )
 
+    ##################
+    # DRAGON WARNING
+    ##################
+    # Do NOT type annotate the return type of MegaMock.it and MegaMock.this
+    # Doing this will cause mypy to complain about the union of MegaMock and the spec
+    # because MyPy / python do not (yet) have a true union / merge type.
+    # The hack used here circumvents the attr-check error you would get attempting to
+    # access any attributes of MegaMock
+
     @staticmethod
     def it(
-        spec: T | None = None,
+        spec: type[T] | None = None,
         *,
-        wraps: T | None = None,
-        spy: T | None = None,
         spec_set: bool = True,
-        instance: bool | None = None,
         side_effect: Any = None,
         return_value: Any = MISSING,
         _wraps_mock: (
@@ -664,6 +693,83 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
     ):
+        """
+        MegaMock a class instance.
+
+        Use `it` for creating mock instances of classes. Use `this` for everything else.
+
+        Note that spec_set defaults to True, which means attempts to set
+        an attribute that doesn't exist will result in an error.
+
+        The recommended way to use classes with MegaMock is to define
+        the type annotations in the class. It does not know what is set
+        inside the __init__ function.
+
+        If you do not own the class and cannot change it, set spec_set to False.
+
+        :param spec: The class to create a mock instance of
+        :param spec_set: If True, only attributes in the spec will be allowed. Assigning
+            attributes not part of the spec will result in a AttributeError
+        :param side_effect: The side effect to use for the mock.
+        :param return_value: The return value to use for the mock. Since this is for
+            a class instance, it would be setting the return value of __call__
+        """
+
+        # hack to get static type inference to think this is a true union
+        # of the two classes
+        def helper(obj) -> type[MegaMock[T, MegaMock | T] | T]:
+            return cast(type[MegaMock | T], lambda: obj)
+
+        return helper(
+            MegaMock(
+                spec=spec,
+                spec_set=spec_set,
+                instance=True,
+                side_effect=side_effect,
+                return_value=return_value,
+                _wraps_mock=_wraps_mock,
+                _parent_mega_mock=_parent_mega_mock,
+                _merged_type=type(MegaMock | spec.__class__),
+                **kwargs,
+            ),
+        )()
+
+    @staticmethod
+    def this(
+        spec: T | None = None,
+        *,
+        wraps: T | None = None,
+        spy: T | None = None,
+        spec_set: bool = True,
+        side_effect: Any = None,
+        return_value: Any = MISSING,
+        _wraps_mock: (
+            mock.Mock
+            | mock.MagicMock
+            | mock.NonCallableMock
+            | mock.NonCallableMagicMock
+            | None
+        ) = None,
+        _parent_mega_mock: _MegaMockMixin | None = None,
+        # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
+        **kwargs,
+    ):
+        """
+        MegaMock something.
+
+        Use `it` for creating mock instances of classes. Use `this` for everything else.
+
+        :param wraps: An object to wrap, this is included for legacy support. Prefer spy
+        :param spy: An object to spy on. The mock will maintain the real behavior of the
+            object, but will also track attribute access and assignments
+        :param spec_set: If True, only attributes in the spec will be allowed. Assigning
+            attributes not part of the spec will result in a AttributeError
+        :param side_effect: The side effect to use for the mock. Exceptions are raised,
+            fuctions are called, and iterables are returned in order in subsequent
+            calls
+        :param return_value: The return value to use for the mock.
+        """
+
         # hack to get static type inference to think this is a true union
         # of the two classes
         def helper(obj) -> type[MegaMock[T, MegaMock | T] | T]:
@@ -675,7 +781,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
                 wraps=wraps,
                 spy=spy,
                 spec_set=spec_set,
-                instance=instance,
+                instance=False,
                 side_effect=side_effect,
                 return_value=return_value,
                 _wraps_mock=_wraps_mock,
@@ -684,6 +790,10 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
                 **kwargs,
             ),
         )()
+
+    ######################
+    # END DRAGON WARNING
+    ######################
 
     @staticmethod
     def from_legacy_mock(
@@ -711,7 +821,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
                 wraps=wraps,
                 _parent_mega_mock=parent_megamock,
             )
-        return MegaMock.it(
+        return MegaMock.this(
             _wraps_mock=mock_obj,
             spec=spec,
             wraps=wraps,
@@ -796,6 +906,9 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         if return_type is None:
             return None
         return create_autospec(return_type, instance=True)
+
+
+MegaMockType = type[MegaMock[T, MegaMock | T] | T]
 
 
 class NonCallableMegaMock(
