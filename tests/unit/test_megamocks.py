@@ -675,3 +675,13 @@ class TestMegaMock:
 
             with pytest.raises(TypeError):
                 mock.my_thing = lambda x: str(x)
+
+        @pytest.mark.xfail
+        def test_wrong_function_argument_type(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+
+            def single_arg_wrong_type(s: str):
+                return 25
+
+            with pytest.raises(TypeError):
+                mock.my_func = single_arg_wrong_type
