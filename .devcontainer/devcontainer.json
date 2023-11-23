@@ -20,9 +20,9 @@
 			"extensions": [
 				"ms-python.python",
 				"tamasfe.even-better-toml",
-				"stkb.rewrap",
 				"mhutchie.git-graph",
-				"eamodio.gitlens"
+				"eamodio.gitlens",
+				"charliermarsh.ruff"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/workspaces/python/.venv/python"
