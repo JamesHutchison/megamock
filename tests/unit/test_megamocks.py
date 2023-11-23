@@ -131,6 +131,12 @@ class TestMegaMock:
         assert noun in name_words.NOUNS
         int(number)  # shouldn't error
 
+    def test_nested_assignment(self) -> None:
+        mock = MegaMock()
+        mock.option.collectonly = False
+
+        assert mock.option.collectonly is False
+
     class TestGenerateMockName:
         def test_name_of_class(self) -> None:
             mega_mock = MegaMock.this(Foo)

@@ -371,7 +371,9 @@ class _MegaMockMixin(Generic[T, U]):
                 return mega_result
             return result
         if not self.megamock.spec and not self.megamock.wraps:
-            return self._get_child_mock(_name=key)
+            result = self._get_child_mock(_name=key)
+            setattr(self, key, result)
+            return result
         raise AttributeError(key)
 
     def __setattr__(self, key, value) -> None:
