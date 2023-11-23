@@ -17,6 +17,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_origin,
     get_type_hints,
     overload,
 )
@@ -414,8 +415,19 @@ class _MegaMockMixin(Generic[T, U]):
             def raise_type_error() -> None:
                 raise TypeError(f"{value!r} is not an instance of {allowed_values}")
 
-            if not isinstance(value, allowed_values):
-                raise_type_error()
+            # This is pretty basic but should handle most cases
+            # Perhaps in the future this could handle things perfectly
+            try:
+                is_allowed_type = isinstance(value, allowed_values)
+            except TypeError:
+                origin = get_origin(allowed_values)
+                if not origin:
+                    raise
+                if not isinstance(value, origin):
+                    raise_type_error()
+            else:
+                if not is_allowed_type:
+                    raise_type_error()
 
     def _get_spec_from_parents(
         self, _parent_stack: list[_MegaMockMixin] | None = None

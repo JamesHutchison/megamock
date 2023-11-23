@@ -19,6 +19,7 @@ from tests.simple_app.pydantic_objects import Child, Parent
 from tests.unit.conftest import SomeClass
 from tests.unit.simple_app.bar import Bar
 from tests.unit.simple_app.foo import Foo
+from tests.unit.simple_app.generics import UsesGenerics
 from tests.unit.simple_app.nested_classes import NestedParent
 
 
@@ -645,3 +646,42 @@ class TestMegaMock:
             mega_mock = MegaMock.this(Parent)
             mega_mock.child = MegaMock.this(Child)
             mega_mock.child.attribute = "foo"
+
+    class TestSubscriptedGenerics:
+        def test_assigning_to_subscripted_generic_function(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+            mock.my_func = lambda x: str(x)
+
+            assert mock.my_func(5) == "5"
+
+        def test_assigning_to_subscripted_generic_collection(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+            mock.my_thing = ["foo", "bar"]
+
+            assert mock.my_thing == ["foo", "bar"]
+
+        def test_assigning_nested_generic(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+            mock.my_iter = [["foo", "bar"]]
+
+            for item in mock.my_iter:
+                assert item == ["foo", "bar"]
+
+        def test_wrong_assignment(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+
+            with pytest.raises(TypeError):
+                mock.my_func = 5
+
+            with pytest.raises(TypeError):
+                mock.my_thing = lambda x: str(x)
+
+        @pytest.mark.xfail
+        def test_wrong_function_argument_type(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+
+            def single_arg_wrong_type(s: str):
+                return 25
+
+            with pytest.raises(TypeError):
+                mock.my_func = single_arg_wrong_type
