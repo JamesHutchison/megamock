@@ -421,6 +421,8 @@ class _MegaMockMixin(Generic[T, U]):
                 is_allowed_type = isinstance(value, allowed_values)
             except TypeError:
                 origin = get_origin(allowed_values)
+                if not origin:
+                    raise
                 if not isinstance(value, origin):
                     raise_type_error()
             else:
