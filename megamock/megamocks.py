@@ -311,7 +311,7 @@ class _MegaMockMixin(Generic[T, U]):
             (mock.MagicMock, mock.Mock),  # callable mocks
         ) or not isclass(self.megamock.spec):
             raise Exception("The megainstance property was intended for class mocks")
-        return cast(U, self.return_value)  # type: ignore
+        return cast(U, self.return_value)
 
     @property
     def _mock_return_value(self) -> Any:
@@ -516,6 +516,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
     Use: MegaMock.it(MySpecClass)
     """
 
+    # Passthrough logic for quickly casting to a MegaMock
     def __new__(cls, _existing: _MegaMockMixin | Any = None, *args, **kwargs):
         if hasattr(_existing, "megamock"):
             return cast(MegaMock[T, U], _existing)
@@ -820,7 +821,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
                 wraps=wraps,
                 _parent_mega_mock=parent_megamock,
             )
-        return MegaMock.this(  # using class because it doesn't require T is a type
+        return MegaMock.this(
             _wraps_mock=mock_obj,
             spec=spec,
             wraps=wraps,

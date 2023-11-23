@@ -465,7 +465,7 @@ class TestMegaMock:
             # check preconditions
             assert isinstance(mega_mock.some_method(), MegaMock)
 
-            MegaMock(mega_mock.some_method).return_value = UseRealLogic
+            mega_mock.some_method.return_value = UseRealLogic
 
             assert mega_mock.some_method() == "value"
 
