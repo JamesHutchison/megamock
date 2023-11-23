@@ -5,3 +5,7 @@ class NestedParent:
 
             def z(self) -> str:
                 return "z"
+
+            @staticmethod
+            def static_z() -> str:
+                return "static_z"
