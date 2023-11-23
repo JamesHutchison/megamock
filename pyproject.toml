@@ -23,13 +23,12 @@ varname = { extras = ["asttokens"], version = "~0.10.0" }
 asttokens = "~2.2.1"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.1.0"
-flake8 = "^6.0.0"
 pytest = "^7.2.1"
 pytest-asyncio = "^0.20.3"
 mypy = "^1.1.1"
 pydantic = "1.10.7"
 ptyme-track = "^0.1.0"
+ruff = "^0.1.6"
 
 [build-system]
 requires = ["poetry-core"]
@@ -44,3 +43,12 @@ profile = "black"
 
 [tool.mypy]
 exclude = ["generated_modules"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
