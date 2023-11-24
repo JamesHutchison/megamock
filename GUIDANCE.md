@@ -265,8 +265,9 @@ def test_that(self) -> None:
 ```
 
 Use `megainstance` to go from a mock class to the mock instance. This is typically used by `MegaPatch`.
-`MegaMock` will automatically create a mock instance of a passed in class, but you can change
-this behavior by setting `instance=False` when creating the mock.
+`MegaMock.it(...)` will automatically create a mock instance of a passed in class. To create a mock class instead,
+use `my_class_mock = MegaMock.the_class(...)`. To access the instance returned, use `MegaMock(my_class_mock).megainstance`.
+Due to limitations in the Python type system, the "cast" using `MegaMock` is probably needed if you are using type checks.
 
 This library was written with a leaning towards `pytest`, which is a popular testing library. See [usage](README.md#usage-pytest) in
 the readme for more information about using the pytest plugin that comes with the library.

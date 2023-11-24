@@ -10,5 +10,4 @@ __all__ = [
     "MegaMock",
     "MegaPatch",
     "start_import_mod",
-    "UseRealLogic",
 ]

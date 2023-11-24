@@ -139,6 +139,11 @@ def start_import_mod() -> None:
     """
 
     def new_import(*args, **kwargs) -> ModuleType:
+        target_module: ModuleType | None = None
+        calling_module: ModuleType | None = None
+        frame: FrameType | None = None
+        names: tuple[str] | None = None
+
         perf_stats["num_imports"] += 1
         measure_start()
         result = orig_import(*args, **kwargs)
@@ -167,8 +172,10 @@ def start_import_mod() -> None:
             measure("total_get_frame")
             assert calling_module
             measure_start()
+            assert frame
             full_line = _reconstruct_full_line(frame)
             measure("total_reconstruct")
+            assert names
             for k in names:
                 measure_start()
                 if full_line and (

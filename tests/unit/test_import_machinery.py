@@ -27,7 +27,7 @@ class TestReconstructFullLine:
 
     def test_multiline_parenthesis_code(self) -> None:
         self._code_lines_patch.mock.return_value = ["from foo import (\n"], 2
-        self._mock_frame.f_code.co_filename = "a_file.py"
+        self._mock_frame.f_code.co_filename = "a_file.py"  # type: ignore
         getline = MegaMock.this(
             linecache.getline, side_effect=["    bar,\n", "    baz,\n", ")\n"]
         )
@@ -39,7 +39,7 @@ class TestReconstructFullLine:
 
     def test_multiline_backslash_code(self) -> None:
         self._code_lines_patch.mock.return_value = ["from foo import \\\r\n"], 2
-        self._mock_frame.f_code.co_filename = "a_file.py"
+        self._mock_frame.f_code.co_filename = "a_file.py"  # type: ignore
         getline = MegaMock.this(
             linecache.getline,
             side_effect=["    bar,\\\r\n", "    baz\r\n", "dont be here\r\n"],
