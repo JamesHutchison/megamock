@@ -4,7 +4,7 @@ import pytest
 
 from megamock import MegaPatch
 from megamock.megamocks import NonCallableMegaMock, UseRealLogic
-from megamock.megapatches import MegaMock
+from megamock.megapatches import MegaMock, MegaPatchContext
 from megamock.megas import Mega
 from tests.unit.simple_app import bar as other_bar
 from tests.unit.simple_app import foo, nested_classes
@@ -28,6 +28,47 @@ from tests.unit.simple_app.uses_nested_classes import (
 from tests.unit.simple_app.uses_nested_classes import (
     get_nested_class_attribute_value as another_nested_class_attr,
 )
+
+
+class TestMegaPatchContext:
+    def test_active_patches(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch)
+        assert megapatch in megapatch_context.active_patches()
+
+    def test_add_remove(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch)
+        assert megapatch in megapatch_context.active_patches()
+        megapatch_context.remove(megapatch)
+        assert megapatch not in megapatch_context.active_patches()
+
+    def test_stop_all(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch1 = MegaMock.it(MegaPatch)
+        megapatch2 = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch1)
+        megapatch_context.add(megapatch2)
+        megapatch_context.stop_all()
+        assert Mega(megapatch1.stop).called_once()
+        assert Mega(megapatch2.stop).called_once()
+
+    def test_context_manager(self) -> None:
+        context_stack_length = len(MegaPatch.context_stack)
+        with MegaPatchContext() as context:
+            assert MegaPatch.context_stack[-1] is context
+            assert len(MegaPatch.context_stack) == context_stack_length + 1
+        assert MegaPatch.context_stack[-1] is not context
+        assert len(MegaPatch.context_stack) == context_stack_length
+
+    def test_delete(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch)
+        del megapatch_context
+        assert Mega(megapatch.stop).called_once()
 
 
 class TestMegaPatchPatching:

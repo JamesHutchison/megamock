@@ -48,9 +48,44 @@ class MegaPatchBehavior:
         return MegaPatchBehavior(autospec=True)
 
 
+class MegaPatchContext:
+    _active_patches: set[MegaPatch]
+
+    def __init__(self) -> None:
+        self._active_patches = set()
+
+    def active_patches(self) -> list[MegaPatch]:
+        return list(self._active_patches)
+
+    def add(self, megapatch: MegaPatch) -> None:
+        self._active_patches.add(megapatch)
+
+    def remove(self, megapatch: MegaPatch) -> None:
+        self._active_patches.remove(megapatch)
+
+    def stop_all(self) -> None:
+        for megapatch in self.active_patches():
+            megapatch.stop()
+
+    def __del__(self) -> None:
+        try:
+            self.stop_all()
+        except Exception:
+            pass
+
+    def __enter__(self) -> MegaPatchContext:
+        MegaPatch.context_stack.append(self)
+        return self
+
+    def __exit__(self, *args, **kwargs) -> None:
+        self.stop_all()
+        top_of_stack = MegaPatch.context_stack.pop()
+        assert top_of_stack is self
+
+
 class MegaPatch(Generic[T, U]):
-    __reserved_names = {"_patches", "_thing", "_path", "_mocked_value", "_return_value"}
-    _active_patches: set[MegaPatch] = set()
+    root_context = MegaPatchContext()
+    context_stack = [root_context]
 
     default_mocker: ModuleType | object = mock
 
@@ -62,13 +97,14 @@ class MegaPatch(Generic[T, U]):
         new_value: MegaMock | Any,
         return_value: Any,
         mocker: ModuleType | object,
-        # _merged_type: type[U] | None = None,
+        context: MegaPatchContext | None = None,
     ) -> None:
         self._patches = patches
         self._thing: Any | None = thing
         self._new_value: MegaMock = new_value
         self._return_value = return_value
         self._mocker = mocker
+        self._context = context or MegaPatch.context_stack[-1]
 
         self._started = False
 
@@ -152,7 +188,8 @@ class MegaPatch(Generic[T, U]):
             # built-in mock
             for patch in self._patches:
                 patch.start()
-        MegaPatch._active_patches.add(self)
+        self._context.add(self)
+        MegaPatch.root_context.add(self)
         self._started = True
 
     def stop(self) -> None:
@@ -163,7 +200,8 @@ class MegaPatch(Generic[T, U]):
             # built-in mock
             for patch in self._patches:
                 patch.stop()
-        MegaPatch._active_patches.remove(self)
+        self._context.remove(self)
+        MegaPatch.root_context.remove(self)
         self._started = False
 
     def __enter__(self) -> MegaPatch[T, U]:
@@ -189,12 +227,18 @@ class MegaPatch(Generic[T, U]):
         return wrapper
 
     @staticmethod
-    def active_patches() -> list[MegaPatch]:
-        return list(MegaPatch._active_patches)
+    def new_context() -> MegaPatchContext:
+        context = MegaPatchContext()
+        MegaPatch.context_stack.append(context)
+        return context
 
     @staticmethod
-    def stop_all() -> None:
-        for megapatch in list(MegaPatch._active_patches):
+    def active_patches(context: MegaPatchContext | None = None) -> list[MegaPatch]:
+        return (context or MegaPatch.root_context).active_patches()
+
+    @staticmethod
+    def stop_all(context: MegaPatchContext | None = None) -> None:
+        for megapatch in list((context or MegaPatch).active_patches()):
             megapatch.stop()
 
     @staticmethod
