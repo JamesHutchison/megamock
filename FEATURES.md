@@ -9,7 +9,7 @@ foo.some_method(wrong, args)  # raises error
 ```
 
 ```python
-FooMock = MegaMock.that(Foo)  # FooMock is a type
+FooMock = MegaMock.the_class(Foo)  # FooMock is a type
 ```
 
 ## Patch objects by simply passing them in. Patches start automatically

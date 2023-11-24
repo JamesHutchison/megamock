@@ -133,7 +133,7 @@ function prior to importing any production or test code. You will also want it s
 
 **Core Classes**
 
-`MegaMock` - the primary class for a mocked object. This is similar to `MagicMock`. To create a mock instance of a class, use `MegaMock.it(MyClass)` to make `MyClass` the [spec](https://docs.python.org/3/library/unittest.mock.html#unittest.mock.create_autospec). To create mock instances of instantiated objects, functions, classes (the type), etc, use `MegaMock.this(some_object)`.
+`MegaMock` - the primary class for a mocked object. This is similar to `MagicMock`. To create a mock instance of a class, use `MegaMock.it(MyClass)` to make `MyClass` the [spec](https://docs.python.org/3/library/unittest.mock.html#unittest.mock.create_autospec). To create a mock class (the type) use `MegaMock.the_class(MyClass)`. To create mock instances of instantiated objects, functions, etc, use `MegaMock.this(some_object)`.
 
 `MegaPatch` - the class for patching. This is similar to `patch`. Use `MegaPath.it(MyObject)` to replace new instances of the `MyObject` class.
 
@@ -170,7 +170,7 @@ def test_something(...):
 ```
 
 `MegaMock` objects have the same attributes as regular `MagicMock`s plus `megamock` and `megainstance`.
-For example, `my_mega_mock.megamock.spy` is the object being spied, if set. `my_class_mock.megainstance` is the instance returned when the class is instantiated.
+For example, `my_mega_mock.megamock.spy` is the object being spied, if set. `my_class_mock.megainstance` is the instance returned when the class is instantiated. Note that you typically access the megainstance with `MegaMock(my_class_mock).megainstance` due to limitations in the type system.
 
 The [guidance document](GUIDANCE.md) is available to provide in-depth information on using mocking and MegaMock. Continuing reading to
 quickly jump in to examples.
@@ -195,7 +195,7 @@ mock_instance = MegaMock.it(MyClass)
 Creating a mock class itself:
 
 ```python
-mock_class = MegaMock.this(MyClass)
+mock_class = MegaMock.the_class(MyClass)
 func_that_wants_a_type(mock_class)
 ```
 

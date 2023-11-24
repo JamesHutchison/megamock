@@ -68,7 +68,7 @@ class TestMegaMock:
         assert mega_mock("input val") == "foo"
 
         with pytest.raises(TypeError):
-            mega_mock()
+            mega_mock()  # type: ignore
 
     def test_call_args_update(self) -> None:
         mega_mock = MegaMock()
@@ -90,13 +90,13 @@ class TestMegaMock:
         assert inspect.isawaitable(mega_mock()) is True
 
     def test_assigning_return_value(self) -> None:
-        mega_mock = MegaMock.this(Foo)
+        mega_mock = MegaMock.it(Foo)
         mega_mock.some_method.return_value = "foo"
 
         assert mega_mock.some_method() == "foo"
 
     def test_allows_for_setting_different_type(self) -> None:
-        mega_mock: Foo = MegaMock.this(Foo)  # mypy should not care
+        mega_mock: Foo = MegaMock.it(Foo)  # mypy should not care
 
         assert mega_mock.z
 
@@ -105,10 +105,10 @@ class TestMegaMock:
 
         mega_mock("s")
 
-        mega_mock.assert_called_once_with("s")
+        mega_mock.assert_called_once_with("s")  # type: ignore
 
         with pytest.raises(AssertionError):
-            mega_mock.assert_called_once_with("t")
+            mega_mock.assert_called_once_with("t")  # type: ignore
 
     def test_return_value_equality_set_in_params(self) -> None:
         result = MegaMock()
@@ -143,7 +143,7 @@ class TestMegaMock:
             assert "name='Foo'" in str(mega_mock)
 
         def test_name_of_method(self) -> None:
-            mega_mock = MegaMock.this(Foo)
+            mega_mock = MegaMock.it(Foo)
             child_mock = mega_mock.some_method()
             assert "name='Foo.some_method() -> str'" in str(child_mock)
 
@@ -185,20 +185,20 @@ class TestMegaMock:
             assert "name='Foo.helpful_manager" in str(mock.helpful_manager)
 
         def test_method_return_value(self) -> None:
-            mock = MegaMock.this(Foo)
+            mock = MegaMock.it(Foo)
             assert "name='Foo.get_a_manager() -> HelpfulManager'" in str(
                 mock.get_a_manager()
             )
 
         def test_method_return_value_attribute(self) -> None:
-            mock = MegaMock.this(Foo)
+            mock = MegaMock.it(Foo)
             assert "name='Foo.get_a_manager() -> HelpfulManager.a'" in str(
                 mock.get_a_manager().a
             )
 
     class TestMockingAClass:
         def test_classes_default_to_instance(self) -> None:
-            mock_instance: SomeClass = MegaMock.this(SomeClass)
+            mock_instance: SomeClass = MegaMock.it(SomeClass)
 
             with pytest.raises(AttributeError):
                 mock_instance.does_not_exist  # type: ignore
@@ -247,7 +247,7 @@ class TestMegaMock:
 
         def test_callable_return_type_matches_annotations(self) -> None:
             with pytest.raises(TypeError):
-                MegaMock.this(Foo).some_method()()
+                MegaMock.it(Foo).some_method()()  # type: ignore
 
             mock_instance = MegaMock.this(Bar)
 
@@ -255,23 +255,23 @@ class TestMegaMock:
                 mock_instance()()
 
         def test_noncallable_classes_are_not_callable(self) -> None:
-            mock_instance = MegaMock.this(Foo)
+            mock_instance = MegaMock.it(Foo)
 
             with pytest.raises(TypeError):
-                mock_instance()
+                mock_instance()  # type: ignore
 
     class TestFromLegacyMock:
         def test_when_autospec_used_on_class(self) -> None:
             legacy_mock = mock.create_autospec(SomeClass)
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock.megamock.spec is SomeClass
+            assert mega_mock.megamock.spec is SomeClass  # type: ignore
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
             assert isinstance(mega_mock.c, NonCallableMegaMock)
 
-            assert isinstance(mega_mock.return_value, NonCallableMegaMock)
+            assert isinstance(mega_mock.return_value, NonCallableMegaMock)  # type: ignore
 
         def test_when_regular_mock(self) -> None:
             legacy_mock = mock.Mock()
@@ -280,7 +280,7 @@ class TestMegaMock:
 
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock.megamock.spec is SomeClass
+            assert mega_mock.megamock.spec is SomeClass  # type: ignore
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -293,7 +293,7 @@ class TestMegaMock:
 
             mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
 
-            assert mega_mock.megamock.spec is SomeClass
+            assert mega_mock.megamock.spec is SomeClass  # type: ignore
             assert hasattr(mega_mock, "b")
 
             assert isinstance(mega_mock.b, MegaMock)
@@ -375,9 +375,10 @@ class TestMegaMock:
             mega_mock.moo
             mega_mock.helpful_manager
 
-            assert len(mega_mock.megamock.spied_access) == 3
+            assert len(MegaMock(mega_mock).megamock.spied_access) == 3
             assert (
-                mega_mock.megamock.spied_access["z"][0]
+                MegaMock(mega_mock)
+                .megamock.spied_access["z"][0]
                 .stacktrace[0]
                 .filename.endswith("test_megamocks.py")
             )
@@ -484,7 +485,7 @@ class TestMegaMock:
             assert mega_mock.what_moos() == "The fox moos"
 
         def test_real_logic_with_class_instance_shortcut(self) -> None:
-            mega_mock = MegaMock.this(Foo)
+            mega_mock = MegaMock.it(Foo)
             mega_mock.moo = "fox"
             MegaMock(mega_mock.what_moos).return_value = UseRealLogic
 
@@ -526,22 +527,22 @@ class TestMegaMock:
 
     class TestMegaInstance:
         def test_using_class(self) -> None:
-            mega_mock = MegaMock.this(Foo)
+            mega_mock = MegaMock.the_class(Foo)
 
-            megainstance = mega_mock.megainstance
+            megainstance = MegaMock(mega_mock).megainstance
             megainstance.s  # should have no mypy errors
-            mega_mock.megainstance.moo = "fox"
+            MegaMock(mega_mock).megainstance.moo = "fox"
 
             # check preconditions
             assert cast(Foo, mega_mock("s")).moo == "fox"  # should not error
 
-            mega_mock.megainstance is Foo("s")
+            assert MegaMock(mega_mock).megainstance is mega_mock("s")
 
         def test_errors_if_not_a_class(self) -> None:
             mega_mock = MegaMock.it(Foo)
 
             with pytest.raises(Exception) as exc:
-                mega_mock.megainstance
+                mega_mock.megainstance  # type: ignore
 
             assert (
                 str(exc.value)
@@ -549,9 +550,8 @@ class TestMegaMock:
             )
 
         def test_calling_method_from_mega_instance(self) -> None:
-            mega_mock = MegaMock.this(Foo)
-
-            mega_mock.megainstance.some_method()
+            mega_mock = MegaMock.the_class(Foo)
+            MegaMock(mega_mock).megainstance.some_method()
 
     class TestMockingContextManager:
         @pytest.fixture(autouse=True)
@@ -605,7 +605,7 @@ class TestMegaMock:
             mega_mock = MegaMock.this(Foo)
 
             with pytest.raises(TypeError) as exc:
-                with mega_mock:
+                with mega_mock:  # type: ignore
                     pass
 
             assert (
@@ -626,7 +626,7 @@ class TestMegaMock:
     class TestGetCallSpec:
         def test_when_annotations_are_missing(self) -> None:
             mock = MegaMock.this(object())
-            assert mock._get_call_spec() is None
+            assert mock._get_call_spec() is None  # type: ignore
 
         def test_when_return_annotation_not_provided(self) -> None:
             def some_func(arg: str):
@@ -645,11 +645,11 @@ class TestMegaMock:
     class TestPydanticObjects:
         @pytest.mark.xfail
         def test_mocking_nested_attributes(self) -> None:
-            mega_mock = MegaMock.this(Parent)
-            mega_mock.child.attribute = "foo"
+            mega_mock = MegaMock.it(Parent)
+            mega_mock.child.attribute = "foo"  # type: ignore
 
         def test_split_out_attributes(self) -> None:
-            mega_mock = MegaMock.this(Parent)
+            mega_mock = MegaMock.it(Parent)
             mega_mock.child = MegaMock.this(Child)
             mega_mock.child.attribute = "foo"
 
@@ -677,10 +677,10 @@ class TestMegaMock:
             mock = MegaMock.it(UsesGenerics)
 
             with pytest.raises(TypeError):
-                mock.my_func = 5
+                mock.my_func = 5  # type: ignore
 
             with pytest.raises(TypeError):
-                mock.my_thing = lambda x: str(x)
+                mock.my_thing = lambda x: str(x)  # type: ignore
 
         @pytest.mark.xfail
         def test_wrong_function_argument_type(self) -> None:
@@ -690,4 +690,4 @@ class TestMegaMock:
                 return 25
 
             with pytest.raises(TypeError):
-                mock.my_func = single_arg_wrong_type
+                mock.my_func = single_arg_wrong_type  # type: ignore

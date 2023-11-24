@@ -12,23 +12,22 @@ from tests.unit.simple_app.async_portion import (
     SomeClassWithAsyncMethods,
     an_async_function,
 )
-from tests.unit.simple_app.bar import Bar, some_context_manager
-from tests.unit.simple_app.bar import some_func
+from tests.unit.simple_app.bar import Bar, some_context_manager, some_func
 from tests.unit.simple_app.bar import some_func as some_other_func
 from tests.unit.simple_app.does_rename import func_that_uses_foo as func_uses_foo
-from tests.unit.simple_app.foo import Foo
+from tests.unit.simple_app.foo import Foo, bar, foo_instance
 from tests.unit.simple_app.foo import Foo as OtherFoo
-from tests.unit.simple_app.foo import bar
 from tests.unit.simple_app.foo import bar as other_bar_constant
-from tests.unit.simple_app.foo import foo_instance
 from tests.unit.simple_app.helpful_manager import HelpfulManager
 from tests.unit.simple_app.locks import SomeLock
 from tests.unit.simple_app.nested_classes import NestedParent
-from tests.unit.simple_app.uses_nested_classes import get_nested_class_attribute_value
+from tests.unit.simple_app.uses_nested_classes import (
+    get_nested_class_attribute_value,
+    get_nested_class_function_value,
+)
 from tests.unit.simple_app.uses_nested_classes import (
     get_nested_class_attribute_value as another_nested_class_attr,
 )
-from tests.unit.simple_app.uses_nested_classes import get_nested_class_function_value
 
 
 class TestMegaPatchPatching:
@@ -141,19 +140,21 @@ class TestMegaPatchPatching:
         assert other_bar_constant == "new_val"
         assert foo.bar == "new_val"
 
+    @pytest.mark.xfail
     def test_patch_that_is_renamed_in_non_test_module_1(self) -> None:
         patch = MegaPatch.it(Foo)
         patch.megainstance.some_method.return_value = "it worked"
 
-        func_uses_foo() == "it worked"
+        assert func_uses_foo() == "it worked"
 
+    @pytest.mark.xfail
     def test_patch_that_is_renamed_in_non_test_module_2(self) -> None:
         from tests.unit.simple_app.does_rename import MyFoo
 
         patch = MegaPatch.it(MyFoo)
         patch.megainstance.some_method.return_value = "it worked"
 
-        func_uses_foo() == "it worked"
+        assert func_uses_foo() == "it worked"
 
     def test_renamed_multiline(self) -> None:
         patch = MegaPatch.it(get_nested_class_attribute_value)
@@ -321,7 +322,6 @@ class TestMegaPatchReturnValue:
 
 
 class TestMegaPatchObject:
-
     # Issue https://github.com/JamesHutchison/megamock/issues/8
     @pytest.mark.xfail
     def test_patching_local_object(self) -> None:
@@ -347,7 +347,7 @@ class TestAsyncPatching:
     async def test_patching_async_method(self) -> None:
         MegaPatch.it(SomeClassWithAsyncMethods.some_method, return_value="val")
 
-        assert await (SomeClassWithAsyncMethods().some_method("s")) == "val"
+        assert await SomeClassWithAsyncMethods().some_method("s") == "val"
 
 
 class TestGotchaCheck:

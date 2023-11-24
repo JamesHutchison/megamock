@@ -36,6 +36,9 @@ jobs:
     - name: Lint with mypy
       run: |
         poetry run mypy .
+    - name: Lint with pyright
+      run: |
+        poetry run pyright
     - name: Test with pytest
       run: |
         poetry run pytest

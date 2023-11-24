@@ -61,7 +61,7 @@ class MegaPatch(Generic[T, U]):
         patches: list[mock._patch],
         new_value: MegaMock | Any,
         return_value: Any,
-        mocker: ModuleType | object
+        mocker: ModuleType | object,
         # _merged_type: type[U] | None = None,
     ) -> None:
         self._patches = patches
@@ -103,7 +103,7 @@ class MegaPatch(Generic[T, U]):
         return cast(MegaMock[T, U], self._return_value)
 
     @return_value.setter
-    def return_value(self, new_value: MegaMock[T, U]) -> None:
+    def return_value(self, new_value: MegaMock[T, U] | Any) -> None:
         self._return_value = new_value
         self._new_value.return_value = new_value
 
@@ -158,7 +158,7 @@ class MegaPatch(Generic[T, U]):
     def stop(self) -> None:
         # support for pytest-mock and similar
         if hasattr(self._mocker, "stopall"):
-            self._mocker.stopall()
+            self._mocker.stopall()  # type: ignore
         else:
             # built-in mock
             for patch in self._patches:
@@ -210,13 +210,13 @@ class MegaPatch(Generic[T, U]):
             if inspect.isfunction(autospeced):
                 assert hasattr(autospeced, "return_value")
                 if return_value is not _MISSING:
-                    autospeced.return_value = return_value
+                    autospeced.return_value = return_value  # type: ignore
                 if side_effect is not None:
                     autospeced.side_effect = side_effect  # type: ignore
                 new = autospeced
             else:
                 new = MegaMock.from_legacy_mock(autospeced, spec=thing)
-            return_value = new.return_value
+            return_value = new.return_value  # type: ignore
         else:
             if return_value is _MISSING:
                 return_value = MegaMock()
@@ -256,7 +256,7 @@ class MegaPatch(Generic[T, U]):
                 mocker, "patch"
             ), "mocker does not appear to be a Mocker object"
 
-        if autostart is False and not hasattr(mocker.patch, "start"):
+        if autostart is False and not hasattr(mocker.patch, "start"):  # type: ignore
             logger.warning(
                 "Disabling autostart doesn't appear to be supported by mocker. "
                 "Falling back to built in mock"
@@ -362,7 +362,7 @@ class MegaPatch(Generic[T, U]):
                     return_value = MegaMock()
                 else:
                     return_value = provided_return_value
-                new = MegaMock[None, None](return_value=return_value)
+                new = MegaMock[None, None](return_value=return_value)  # type: ignore
         else:
             new = new_given
             if provided_return_value is not _MISSING:
