@@ -6,7 +6,7 @@ import logging
 import sys
 from functools import cached_property
 from types import ModuleType
-from typing import Any, Callable, Generic, Iterable, Self, TypeVar, cast
+from typing import Any, Callable, Generic, Iterable, TypeVar, cast
 from unittest import mock
 
 from varname import argname  # type: ignore
@@ -73,7 +73,7 @@ class MegaPatchContext:
         except Exception:
             pass
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> MegaPatchContext:
         MegaPatch.context_stack.append(self)
         return self
 
