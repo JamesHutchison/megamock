@@ -736,7 +736,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
 
         # hack to get static type inference to think this is a true union
         # of the two classes
-        def helper(obj) -> type[MegaMock[T, MegaMock | T] | T]:
+        def helper(obj) -> type[T | MegaMock[T, MegaMock | T]]:
             return cast(type[MegaMock | T], lambda: obj)
 
         return helper(
@@ -755,7 +755,6 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
 
     @staticmethod
     def the_class(spec: type[T], *, spec_set: bool = True, **kwargs):
-        return MegaMock._the_class(spec, spec_set=spec_set, _spec_too=spec, **kwargs)
         """
         MegaMock a class.
 
@@ -777,6 +776,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         :param return_value: The return value to use for the mock. Since this is for
             a class instance, it would be setting the return value of __call__
         """
+        return MegaMock._the_class(spec, spec_set=spec_set, _spec_too=spec, **kwargs)
 
     @staticmethod
     def _the_class(

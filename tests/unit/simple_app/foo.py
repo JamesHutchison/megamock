@@ -33,5 +33,8 @@ class Foo:
     def get_a_manager(self) -> HelpfulManager:
         return HelpfulManager()
 
+    def takes_args(self, arg1: str, arg2: str) -> tuple[str, str]:
+        return (arg1, arg2)
+
 
 foo_instance = Foo("global")
