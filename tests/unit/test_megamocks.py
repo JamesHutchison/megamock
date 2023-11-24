@@ -15,12 +15,12 @@ from megamock.megamocks import (
 )
 from megamock.megapatches import MegaPatch
 from megamock.megas import Mega
-from tests.simple_app.pydantic_objects import Child, Parent
 from tests.unit.conftest import SomeClass
 from tests.unit.simple_app.bar import Bar
 from tests.unit.simple_app.foo import Foo
 from tests.unit.simple_app.generics import UsesGenerics
 from tests.unit.simple_app.nested_classes import NestedParent
+from tests.unit.simple_app.pydantic_objects import Child, Parent
 
 
 class TestAttributeTrackingBase:
