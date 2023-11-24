@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    import generated_modules.import_generated_modules as import_generated_modules
+    import generated_modules.import_generated_modules as import_generated_modules  # type: ignore # noqa
 
     end_time = time.time()
 
