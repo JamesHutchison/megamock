@@ -320,7 +320,6 @@ Turning on real logic:
 
 ```python
 import my_module
-from mega_mock import UseRealLogic
 
 mega_patch = MegaPatch.it(my_module.SomeClass)
 Mega(mega_patch.megainstance.some_pure_logic_method).use_real_logic()
