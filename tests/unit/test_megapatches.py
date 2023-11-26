@@ -137,15 +137,25 @@ class TestMegaPatchPatching:
 
     def test_patch_property(self) -> None:
         expected = "dog"
-        MegaPatch.it(Foo.moo, new=expected)
+        MegaPatch.it(Foo.zzz, new=expected)
 
-        assert Foo("").moo == expected
+        assert Foo("").zzz == expected
 
     def test_patch_cached_property(self) -> None:
         expected = MegaMock.it(spec=HelpfulManager)
         MegaPatch.it(Foo.helpful_manager, new=expected)
 
         assert Foo("").helpful_manager is expected
+
+    @pytest.mark.xfail
+    def test_set_property_side_effect_after_setting_patch(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.megainstance.zzz.side_effect = Exception("raised!")  # type: ignore
+
+        # this doesn't work because properties are replaced with a mock object,
+        # so the implicit call is eliminated
+        with pytest.raises(Exception):
+            Foo("").zzz
 
     def test_patch_nested_class_function(self) -> None:
         MegaPatch.it(NestedParent.NestedChild.AnotherNestedChild.z, return_value="a")
