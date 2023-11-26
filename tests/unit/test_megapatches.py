@@ -234,12 +234,15 @@ class TestMegaPatchPatching:
 
         assert str(exc.value) == "Error!"
 
-    @pytest.mark.xfail
     def test_setting_side_effect_to_a_property(self) -> None:
-        # This doesn't work because side_effect requires making a call.
-        # If you really need to have a property that raises an exception,
-        # then you'll need to structure your code to call a function
-        # and then mock that function.
+        MegaPatch.it(Foo.zzz, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").zzz
+
+        assert str(exc.value) == "Error!"
+
+    def test_setting_side_effect_to_a_cached_property(self) -> None:
         MegaPatch.it(Foo.helpful_manager, side_effect=Exception("Error!"))
 
         with pytest.raises(Exception) as exc:

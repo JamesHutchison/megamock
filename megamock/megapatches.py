@@ -278,6 +278,7 @@ class MegaPatch(Generic[T, U]):
         autostart: bool = True,
         mocker: ModuleType | object | None = None,
         new_callable: Callable | None = None,
+        side_effect: Any | None = None,
         **kwargs: Any,
     ):
         """
@@ -293,6 +294,7 @@ class MegaPatch(Generic[T, U]):
             object to return. This is usually some replacement Mock bject.
             This is mainly for legacy support and is not recommended since it can't be
             combined with autospec.
+        :param side_effect: The side-effect to use
         """
         if mocker is None:
             mocker = MegaPatch.default_mocker
@@ -315,6 +317,9 @@ class MegaPatch(Generic[T, U]):
         else:
             parent_mock = None
 
+        if side_effect is not None:
+            kwargs["side_effect"] = side_effect  # this may get popped later
+
         if behavior is None:
             behavior = MegaPatchBehavior.for_thing(thing)
         if new_callable is not None:
@@ -323,6 +328,15 @@ class MegaPatch(Generic[T, U]):
             return_value = kwargs.get("return_value")
             kwargs["new_callable"] = new_callable
         else:
+            # support giving properties side-effects
+            if (
+                isinstance(thing, (property, cached_property))
+                and side_effect
+                and not new
+            ):
+                new = property(MegaMock(side_effect=side_effect))
+                kwargs.pop("side_effect")
+
             if (autospec := kwargs.pop("autospec", None)) in (True, False):
                 behavior.autospec = autospec
             new, return_value = MegaPatch._new_return_value(

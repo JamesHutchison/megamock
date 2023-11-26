@@ -390,9 +390,10 @@ class TestMegaMock:
         async def test_async_mock_basics(self) -> None:
             mega_mock: AsyncMegaMock = AsyncMegaMock()
             assert asyncio.iscoroutinefunction(mega_mock) is True
-            assert inspect.isawaitable(mega_mock()) is True
+            mock_coroutine = mega_mock()
+            assert inspect.isawaitable(mock_coroutine) is True
 
-            await mega_mock()
+            await mock_coroutine
             assert mega_mock.await_count == 1
 
         async def test_function_side_effect(self) -> None:
