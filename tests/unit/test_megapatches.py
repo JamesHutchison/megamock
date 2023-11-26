@@ -191,14 +191,12 @@ class TestMegaPatchPatching:
         assert other_bar_constant == "new_val"
         assert foo.bar == "new_val"
 
-    @pytest.mark.xfail
     def test_patch_that_is_renamed_in_non_test_module_1(self) -> None:
         patch = MegaPatch.it(Foo)
         patch.megainstance.some_method.return_value = "it worked"
 
         assert func_uses_foo() == "it worked"
 
-    @pytest.mark.xfail
     def test_patch_that_is_renamed_in_non_test_module_2(self) -> None:
         from tests.unit.simple_app.does_rename import MyFoo
 
