@@ -1,8 +1,7 @@
 from collections import defaultdict
 from types import ModuleType
-from typing import NamedTuple
 
-ModAndName = NamedTuple("ModAndName", [("module", str), ("name", str)])
+from megamock.import_types import ModAndName
 
 
 class References:
@@ -97,7 +96,7 @@ class References:
         And then the MegaPatch might look like this:
             MegaPatch.it(OtherFoo.bar, ...)
         """
-        components = original_name.split(".", 0)
+        components = original_name.split(".")
         if len(components) > 1:
             base_name, right_side = components[0], [".".join(components[1:])]
         else:

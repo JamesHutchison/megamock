@@ -89,6 +89,12 @@ class TestMegaPatchPatching:
 
         assert Foo("").z == "b"
 
+    def test_patch_from_module_reference(self) -> None:
+        patch = MegaPatch.it(foo.Foo)
+        patch.return_value.z = "b"
+
+        assert Foo("").z == "b"
+
     def test_patch_global_module_variable(self) -> None:
         MegaPatch.it(bar, new="a")
 
@@ -101,6 +107,10 @@ class TestMegaPatchPatching:
 
     def test_patch_class_method_supports_return_value_as_arg(self) -> None:
         MegaPatch.it(Foo.some_method, return_value="foo")
+        assert Foo("s").some_method() == "foo"
+
+    def test_patch_class_method_from_module_reference(self) -> None:
+        MegaPatch.it(foo.Foo.some_method, return_value="foo")
         assert Foo("s").some_method() == "foo"
 
     def test_patch_class_method_supports_return_value_as_attribute(self) -> None:
