@@ -296,7 +296,9 @@ mock = MegaMock.it(ThirdPartyClass, spec_set=False)
 ```
 
 # Advanced Use Cases
-You can mock a context manager. This is typically done through `MegaPatch.it` rather than passing around context managers as args.
+
+## Context Managers
+This is typically done through `MegaPatch.it` rather than passing around context managers as args.
 The preferred way of altering the context manager behavior is through the `set_context_manager...` `MegaPatch` methods.
 
 Setting a return value:
@@ -350,6 +352,31 @@ with manager:
 with manager:
     pass
 ```
+
+## Properties
+
+When patching properties directly, you can set the side_effect via MegaPatch.
+
+```python
+patch = MegaPatch.it(MyClass.my_property, side_effect=Exception("Error!"))
+```
+
+There's currently no supported way to do this through MegaMock.
+
+If you want to change the value of a property, just assign it.
+
+```python
+mock = MegaMock.it(MyClass)
+mock.my_property = "foo"
+MegaMock(mock).my_property = "foo"  # cast to megamock to make typing happy
+
+patch = MegaPatch.it(MyClass.my_property, new="foo")
+```
+
+There's also no way to enable the "real" logic of a property. Keep in mind if your properties
+have complex logic you may be misusing them. In many cases, properties are for when you want
+to match an existing interface that used an attribute value instead of a function. If your
+code is litered with properties, then that's a code smell.
 
 # Behavior differences from `mock`
 - Using `MegaMock` is like using the `mock.create_autospec()` function
