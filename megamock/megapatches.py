@@ -317,7 +317,8 @@ class MegaPatch(Generic[T, U]):
         else:
             parent_mock = None
 
-        kwargs["side_effect"] = side_effect  # this may get popped later
+        if side_effect is not None:
+            kwargs["side_effect"] = side_effect  # this may get popped later
 
         if behavior is None:
             behavior = MegaPatchBehavior.for_thing(thing)
