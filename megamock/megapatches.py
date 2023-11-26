@@ -456,20 +456,19 @@ class MegaPatch(Generic[T, U]):
         kwargs: dict,
     ) -> list[mock._patch]:  # type: ignore  # mypy bug?
         patches = []
-        paths_and_names = (
-            References.get_references(module_path, corrected_passed_in_name)
-            | References.get_reverse_references(module_path, corrected_passed_in_name)
-            | {ModAndName(module_path, name_to_patch)}
-        )
+        paths_and_names = {ModAndName(module_path, name_to_patch)}
+
+        # if the passed in name is a nested name in a module, then only patch once.
         do_one_patch = "." in corrected_passed_in_name
-        # if the passed in name is a nested name, then only patch ones. References
-        # to it will already
+
+        if not do_one_patch:
+            paths_and_names |= References.get_references(
+                module_path, corrected_passed_in_name
+            ) | References.get_reverse_references(module_path, corrected_passed_in_name)
         for path, named_as in paths_and_names:
             mock_path = f"{path}.{named_as}"
             p = mocker.patch(mock_path, new, **kwargs)
             patches.append(p)
-            if do_one_patch:
-                break
 
         return patches
 
