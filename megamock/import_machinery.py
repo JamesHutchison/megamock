@@ -146,15 +146,15 @@ def start_import_mod() -> None:
 
         perf_stats["num_imports"] += 1
         measure_start()
-        result = orig_import(*args, **kwargs)
+        imported_module = orig_import(*args, **kwargs)
         measure("total_orig_import")
 
         measure_start()
         module_name = args[0]
         proceed = (
             module_name not in skip_modules
-            and not module_name.startswith("_")
-            and (target_module := sys.modules.get(module_name))
+            and not module_name.startswith("_")  # skip private or C modules
+            and (target_module := imported_module or sys.modules.get(module_name))
             and len(args) > 3
             and (names := args[3])
         )
@@ -196,6 +196,6 @@ def start_import_mod() -> None:
                 References.add_reference(target_module, calling_module, k, renamed_to)
                 measure("total_add_reference")
 
-        return result
+        return imported_module
 
     builtins.__import__ = new_import
