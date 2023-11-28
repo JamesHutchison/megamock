@@ -1,0 +1,1 @@
+Set the temperature of the GPT to 0
