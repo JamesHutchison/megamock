@@ -2,6 +2,9 @@
 
 Pew pew! Sane defaults for mocking behavior! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-delimited path strings! Create tests faster than ever!
 
+## New! Use the official GPT!
+A OpenAI ChatGPT+ GPT has been created for MegaMock! Ask questions about library usage or have it generate tests! The GPT has been coached on test generation and should outperform vanilla GPT-4. The GPT is available at: TBD
+
 Supported Python Versions: 3.10+
 ### Installation
 
