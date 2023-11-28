@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "megamock"
-version = "0.1.0-beta.8"
+version = "0.1.0-beta.9"
 description = "Mega mocking capabilities - stop using dot-notated paths!"
 authors = ["James Hutchison <jamesghutchison@proton.me>"]
 readme = "README.md"
@@ -21,7 +21,6 @@ classifiers = [
 python = ">=3.10 <4.0"
 varname = { extras = ["asttokens"], version = "~0.10.0" }
 asttokens = "~2.2.1"
-pyright = "^1.1.337"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
@@ -30,6 +29,7 @@ mypy = "^1.1.1"
 pydantic = "1.10.7"
 ptyme-track = "^0.1.0"
 ruff = "^0.1.6"
+pyright = "^1.1.337"
 
 [build-system]
 requires = ["poetry-core"]
