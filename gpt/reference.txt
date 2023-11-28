@@ -1,0 +1,2227 @@
+Test improvement pytest tips:
+- Check the exception raised to make sure its the right one
+- Do not use pytest.raises(Exception) unless you are raising a custom exception in the test, in which case, check the string value after catching it
+- Avoid passing in MegaMock, prefer MegaMock.it
+- Create setup functions rather than duplicating code
+- Avoid boilerplate
+- If you cannot remember or don't have something, prompt the user
+- If you do not know how to instantiate a class, use MegaMock.it
+- Use `assert Mega(my_func).called_once_with(...)` instead of `my_func.assert_called_once()`
+
+Sanity phrase:
+"Sanity check passed!"
+
+
+# **MegaMock** - _The Developer Experience Upgrade for Python Mocking_
+
+Pew pew! Sane defaults for mocking behavior! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-delimited path strings! Create tests faster than ever!
+
+Supported Python Versions: 3.10+
+### Installation
+
+Pip installation:
+```
+pip install megamock
+```
+
+[poetry](https://python-poetry.org/) (as a development dependency):
+```
+poetry add megamock --group=dev
+```
+
+# Why Use MegaMock? (short version)
+MegaMock is a library that provides a better interface for mocking and patching in Python. Its version
+of patch doesn't have any gotchas based on how you import something, and it also automatically
+creates mocks using best practices. Additionally, the generated mock types are unions of the mocked object
+and `MegaMock`, allowing you to better leverage your IDE's autocomplete.
+
+![Sample MegaMock vs Mock Comparison](docs/img/megamock-example.gif)
+
+Mock:
+
+```python
+class_mock = mock.create_autospec(ClassICareAbout, instance=True)
+# cmd / alt clicking on "method_call" doesn't direct you to the definition
+class_mock.method_call.return_value = "some value"
+
+# can't simply cmd / alt click and go to ClassICareAbout
+with mock.patch("some.hard.to.remember.and.long.dot.path.ClassICareAbout", class_mock) as mock_instance:
+    do_something()
+```
+
+MegaMock:
+
+```python
+# cmd / alt clicking on ClassICareAbout takes you to the definition
+patch = MegaPatch.it(ClassICareAbout)
+mock_instance = patch.megainstance
+# cmd / alt clicking on "method_call" directs you to the definition
+mock_instance.method_call.return_value = "some value"
+
+do_something()
+```
+
+# Why Use MegaMock? (long version)
+MegaMock was created to address some shortcomings in the built-in Python library:
+- Legacy code holds back "best practice" defaults, so many developers write sub-optimal mocks
+  that allow things that should not be allowed. Likewise, writing better mocks are more work,
+  so there's a tendency to write simpler code because, at that point in time, the developer
+  felt that is all that was needed. MegaMock's simple interface provides sane defaults.
+- `mock.patch` is very commonly used, and can work well when `autospec=True`, but has the drawback that
+  you need to pass in a string to the thing that is being patched. Most (all?) IDEs do not properly
+  recognize these strings as references to the objects that are being patched, and thus automated
+  refactoring and reference finding skips them. Likewise, automatically getting a dot referenced path
+  to an object is also commonly missing functionality. This all adds additional burden to the developer.
+  With `MegaPatch`, you can import an object as you normally would into the test, then pass in thing
+  itself you want to patch. This even works for methods, attributes, and nested classes! Additionally, your IDE's autocomplete for attributes
+  will work in many situations as well!
+- `mock.patch` has a gotcha where the string you provide must match where the reference lives.
+  So, for example, if you have in `my_module.py`: `from other_module import Thing`, then doing
+  `mock.patch("other_module.Thing")` won't actually work, because the reference in `my_module` still
+  points to the original. You can work around this by doing `import other_module` and referencing `Thing`
+  by `other_module.Thing`. MegaMock does not have this problem, and it doesn't matter how you import.
+
+## Features
+
+See the [full features list](FEATURES.md).
+## Example Usage
+
+### Production Code
+```python
+from module.submodule import MyClassToMock
+
+
+def my_method(...):
+    ...
+    a_thing = MyClassToMock(...)
+    do_something_with_a_thing(a_thing)
+    ...
+
+
+def do_something_with_a_thing(a_thing: MyClassToMock) -> None:
+    result = a_thing.some_method(...)
+    if result == "a value":
+        ...
+```
+
+### Test Code
+```python
+from megamock import MegaPatch
+from module.submodule import MyClassToMock
+
+
+def test_something(...):
+    patch = MegaPatch.it(MyClassToMock.some_method)
+    patch.return_value = "a value"
+
+    my_method(...)
+```
+
+## Documentation
+
+### Usage (pytest)
+
+With [pytest](https://pytest.org), MegaMock is easily leveraged by using the included pytest plugin. You can use it by adding `-p megamock.plugins.pytest`
+to the command line.
+
+Command line example:
+```
+pytest -p megamock.plugins.pytest
+```
+
+`pyproject.toml` example:
+```toml
+[tool.pytest.ini_options]
+addopts = "-p megamock.plugins.pytest"
+```
+
+The pytest plugin also automatically stops `MegaPatch`es after each test. If `pytest-mock` is installed, the default mocker will be switched to the `pytest-mock` `mocker`.
+
+### Usage (other test frameworks)
+
+If you're not using the pytest plugin, import and execution order is important for MegaMock. When running tests, you will need to execute the `start_import_mod`
+function prior to importing any production or test code. You will also want it so the loader is not used in production.
+
+-------------------
+
+**Core Classes**
+
+`MegaMock` - the primary class for a mocked object. This is similar to `MagicMock`. To create a mock instance of a class, use `MegaMock.it(MyClass)` to make `MyClass` the [spec](https://docs.python.org/3/library/unittest.mock.html#unittest.mock.create_autospec). To create a mock class (the type) use `MegaMock.the_class(MyClass)`. To create mock instances of instantiated objects, functions, etc, use `MegaMock.this(some_object)`.
+
+`MegaPatch` - the class for patching. This is similar to `patch`. Use `MegaPath.it(MyObject)` to replace new instances of the `MyObject` class.
+
+`Mega` - helper class for accessing mock attributes without having to memorize them due to lost type inference. Use `Mega(some_megamock)`.
+Note that the `assert_` methods, such as `assert_called_once`, is now `called_once` and returns a boolean. The assertion error
+is stored in `Mega.last_assertion_error`. This is typically for doing asserts against mocked functions and methods.
+
+--------------------
+
+Dependency injection example:
+```python
+
+from megamock import MegaMock
+
+def test_something(...):
+    manager = MegaMock.it(MyManagerClass)
+    service = SomeService(manager)
+    ...
+```
+
+MegaPatch example:
+```python
+from elsewhere import Service
+
+from megamock import MegaPatch
+
+def test_something(...):
+    patched = MegaPatch.it(Service.make_external_call)
+    patched.return_value = SomeValue(...)
+    service = SomeService(...)
+
+    code_under_test(service)
+    ...
+```
+
+`MegaMock` objects have the same attributes as regular `MagicMock`s plus `megamock` and `megainstance`.
+For example, `my_mega_mock.megamock.spy` is the object being spied, if set. `my_class_mock.megainstance` is the instance returned when the class is instantiated. Note that you typically access the megainstance with `MegaMock(my_class_mock).megainstance` due to limitations in the type system.
+
+The [guidance document](GUIDANCE.md) is available to provide in-depth information on using mocking and MegaMock. Continuing reading to
+quickly jump in to examples.
+
+-----------------------
+
+### Learning By Example
+
+All examples below have the following imports:
+
+```python
+from my_module import MyClass
+from megamock import Mega, MegaMock, MegaPatch
+```
+
+Creating a mock instance of a class:
+
+```python
+mock_instance = MegaMock.it(MyClass)
+```
+
+Creating a mock class itself:
+
+```python
+mock_class = MegaMock.the_class(MyClass)
+func_that_wants_a_type(mock_class)
+```
+
+Spying an object:
+
+```python
+my_thing = MyClass()
+spied_class = MegaMock.this(spy=my_thing)
+
+# ... do stuff with spied_class...
+
+Mega(spied_class.some_method).call_args_list  # same as wraps
+
+# check whether a value was accessed
+# if things aren't as expected, you can pull up the debugger and see the stack traces
+assert len(spied_class.megamock.spied_access["some_attribute"]) == 1
+
+spy_access_list = spied_class.megamock.spied_access["some_attribute"]
+spy_access: SpyAccess = spy_access_list[0]
+spy_access.attr_value  # shallow copy of what was returned
+spy_access.stacktrace  # where the access happened
+spy_access.time  # when it happened (from time.time())
+spy_access.top_of_stacktrace  # a shorthand property intended to be used when debugging in the IDE
+spy_access.format_stacktrace()  # return a list of strings for the stacktrace
+spy_access.print_stacktrace()  # display the stacktrace to the console
+```
+
+
+Patching a class:
+
+```python
+mock_patch = MegaPatch.it(MyClass)
+
+# the class itself
+mock_patch.new_value
+
+# the class instance
+mock_patch.megainstance
+
+# the return value of the __call__ method on the class
+mock_patch.megainstance.return_value
+```
+
+Patching a class attribute:
+
+```python
+# temporarily update the max retries to 0
+mega_patch = MegaPatch.it(MyClass.max_retries, new=0)
+```
+
+Patching a class method:
+
+```python
+mega_patch = MegaPatch.it(MyClass.my_method, return_value=...)
+```
+
+Alternatively:
+```python
+mega_patch = MegaPatch.it(MyClass.my_method)
+mega_patch.mock.return_value = ...
+```
+
+```python
+mega_patch = MegaPatch.it(MyClass.my_method)
+mega_patch.new_value.return_value = ...
+```
+
+You can also alter the return value of your mock without creating a separate mock object first.
+
+```python
+mega_patch.return_value.user = SomeUser()
+```
+
+Working with `MegaPatch` and classes:
+
+`mega_patch.new_value` is the class _type_ itself
+
+```python
+mega_patch = MegaPatch.it(MyClass)
+
+mega_patch.new_value.x is MyClass.x
+```
+
+`mega_patch.return_value` is the class _instance_ returned. However, there is the property
+`megainstance` which is preferred because it has better type hinting.
+
+```python
+mega_patch = MegaPatch.it(MyClass)
+
+# instead of this, for which the static type is Any:
+mega_patch.return_value is MyClass()
+
+# use this, which has a static type of MegaMock | MyClass:
+mega_patch.megainstance is MyClass()
+```
+
+Patching a module attribute:
+
+```python
+import my_module
+
+MegaPatch.it(my_module.some_attribute, new=...)
+```
+
+Patching a method of a nested class:
+
+```python
+import my_module
+
+MegaPatch.it(
+    my_module.MyClass.MyNestedClass.some_method,
+    return_value=...
+)
+```
+
+Setting the return value:
+
+```python
+my_mock.my_method.return_value = "foo"
+```
+
+Turning on real logic:
+
+```python
+import my_module
+
+mega_patch = MegaPatch.it(my_module.SomeClass)
+Mega(mega_patch.megainstance.some_pure_logic_method).use_real_logic()
+
+do_something_that_invokes_that_function(...)
+```
+
+
+# MegaMock Guidance
+## About
+This guide explains the role and usage of MegaMock. If you're ready to use MegaMock, skip to the [General Guidance](#general-guidance) section.
+
+## Why Mock?
+Consider a situation where you have one class, which makes 3rd party API calls. Which
+interface would you rather use?
+
+Interface A
+```python
+class A:
+    def some_func(self, args) -> ClientApiResponse:
+        api_client = get_api_client_from_pool()
+        response = api_client.make_api_call(some, args)
+        # ... do something with response ...
+```
+
+Interface B
+```python
+class A:
+    def __init__(self, client_pool: BaseApiClientPool):
+        self.client_pool = client_pool
+
+    def some_func(self, args) -> BaseApiResponse:
+        api_client = self.client_pool.get_client()
+        response = api_client.make_api_call(some, args)
+        # ... do something with response ...
+```
+
+Interface C
+```python
+class A:
+    def some_func(
+        self,
+        client_pool: BaseApiClientPool,
+        api_call_maker: BaseApiCallMaker,
+        args,
+        _connect_timeout: int = 5,
+        _read_timeout: int = 10,
+        _retries: int = 3,
+        _retry_strategy: BaseRetryStrategy = ExponentialRetryBackoffStrategy(),
+    ) -> BaseApiResponse:
+        api_client = client_pool.get_client(_connect_timeout, _read_timeout)
+        response = api_call_maker(api_client).make_api_call(args, retries=_retries, retry_strategy=_retry_strategy)
+        # ... do something with response ...
+```
+
+The alternative to mocking and patching objects is to create a more complex class structure, where
+the real implementation and the fake implementation are subclasses of a common base class.
+
+Swapping everything with replaceable parts can lead to complexity, increasing cognitive load for
+developers. They must understand the function's purpose, identify production classes, and map
+the business domain to presented classes. Developers may struggle with code navigation, as they need
+to identify actual classes among base and test classes. This complexity can make simple situations
+harder to understand and navigate. Would you rather cmd / ctrl + click on a function and see the
+actual implementation, or a placeholder implementation?
+
+It's better to have a simple interface that mirrors the business domain as much possible, and only
+introduce complexities where it is necessary.
+
+Mocking and using the patch functionality also saves you time by allowing more leeway when writing
+code. You can quickly write code as you find it intuitive, like writing a rough draft of a document,
+and cheaply write unit tests against it. You can then refactor the code later if needed.
+
+## Why MegaMock?
+
+Even seasoned Python developers are frequently bit by the built-in mock framework. One very nasty
+gotcha is found in the `patch` function. It's very easy to accidentally patch in the wrong location.
+This stems from the nature that code is often written. A common programming technique to import
+an object is to type out the name of the class or function that you want, then press a keyboard shortcut to pull up
+the quick action menu and have it generate the import. The import is usually, but not always,
+a `from` import. This can create a divergence when patching an object. In some modules,
+you may need to apply the patch on the module where the object was defined. In other modules,
+you would need to apply the patch where it is being used.
+
+Another issue with the `patch` function is that it requires a dot path to the thing you are patching.
+Most IDEs don't easily provide this functionality, so often times the developer is manually typing
+this out or at least copying a path reference and swapping the slashes for periods.
+
+```
+./path/to/my/file.py -> path.to.my.file
+```
+
+This is error prone,
+and time consuming. The dot paths are not changed when things are renamed. The calls to patch
+should also include the `autospec=True` argument, which isn't default behavior, when it should be.
+Finally, `patch`es need to be remembered to be started and stopped.
+
+```python
+# many patch strings may extend so long they need to be split into multiple lines
+patch = mock.patch("mod1.mod2.mod3.SomeClass.some_func", autospec=True, return_value="val")
+patch.start()
+```
+
+An alternative is to patch an object using `patch.object`. This is closer to how MegaMock operates,
+because you are importing something to patch. One downside is that the patching still takes in a
+string argument, and its still sensitive to how things are imported.
+
+```python
+from mod1.mod2.mod3 import SomeClass
+
+patch = mock.patch.object(SomeClass, "some_func", autospec=True, return_value="val")
+patch.start()
+```
+
+The library `pytest-mock` provides a `mocker` fixture that can be used to patch objects. This fixture
+automatically does the start and stop for you, among a few other improvements.
+
+**In contrast, here is how MegaMock does it:**
+
+```python
+MegaPatch.it(SomeClass.some_func, return_value="val")
+```
+
+MegaMock will not automatically stop patches for you. You can stop them using:
+
+```python
+MegaPatch.stop_all()
+```
+
+However, it's better to the built-in pytest plugin, if you are using pytest, which will automatically
+stop all patches every test.
+
+--------------------
+
+You may want to pass in a mock object to a function and test that. It's very easy to write
+mock code that looks like this:
+
+```python
+mock = mock.MagicMock()
+
+func_under_test(mock)
+```
+
+The drawback is that if func_under_test misuses the mock object relative to the actual type it is
+supposed to represent, then the test will pass, but the code will fail in production.
+
+Many people may instead do this:
+
+```python
+mock = mock.MagicMock(spec=SomeClass)
+```
+
+but actually, this is still wrong. There's still behaviors that are not properly reflected in the mock.
+Nested attributes are too broad.
+
+The correct way to do this is to use `create_autospec`:
+
+```python
+mock = mock.create_autospec(SomeClass, spec_set=True, instance=True)
+```
+
+Now the mock object will have the same interface as `SomeClass`, will error if an attribute is assigned
+that isn't part of the definition, and it also is mock instance of SomeClass instead of a mock type.
+Likewise, attributes are only callable if they are actually callable. This also has its own flaws,
+and attempting to get it to do what you want in some cases are non-trivial due to it generating
+callables that are missing attributes you normally expect on `MagicMock` objects.
+
+With MegaMock, doing all this is as simple as:
+
+```python
+mock = MegaMock.it(SomeClass)
+```
+
+Another example where MegaMock can be helpful is when you want to _mostly_ mock out a class.
+There is no simple way to do this in the built-in mock library.
+
+With MegaMock, you can do this:
+
+```python
+MegaPatch.it(MyClass)
+use_real_logic(MyClass.megainstance.some_func)
+
+do_test_logic(...)
+```
+
+## General Guidance
+
+MegaMock is intended to _replace_ the built in `unittest.mock` library. In many cases it can be
+a drop in replacement where you simply change the patterns on how you do things.
+
+As mentioned earlier in the guidance, do not write "Fake" and "Real" classes if you can avoid it.
+Instead, write real classes and use mocking when fake behavior is needed.
+
+Keep static typing in mind when writing code, even if you are writing a simple script that you are not
+type checking. While it may be tempting to use strings when the "value to pass around" is a complex object:
+
+```python
+mock = MegaMock(outgoing_function)
+
+func_under_test("value to pass around")
+
+assert Mega(mock).called_once_with("value to pass around")
+```
+
+It's better to use mock objects instead, which won't fail when put under the scrutiny of mypy.
+
+```python
+mock = MegaMock(outgoing_function)
+value_to_pass_around = MegaMock(the_type)
+
+func_under_test(value_to_pass_around)
+
+assert Mega(mock).called_once_with(value_to_pass_around)
+```
+
+When creating a test with a single mock, prefer using the name `mock` for the variable if it
+does not shadow another variable. Prefer `patch` for MegaPatch, under the same circumstances.
+
+You should almost always use `MegaPatch.it` instead of `MegaPatch` directly. When creating
+a `MegaMock` object with a spec, use `MegaMock.it(...)` or `MegaMock.this(...)`
+
+When writing tests, avoid testing the implementation. When you test the implementation,
+you create a brittle test that easily breaks when the implementation changes.
+It can be very tempting to liberally create mocks of almost everything and validate that one
+slice of the code is properly calling another slice, but this should _generally_ be avoided,
+and should never be the de facto way things are tested in your project.
+
+```python
+def ive_got_the_power(x):
+    return pow(x, SOME_CONSTANT)
+
+
+def test_ive_got_the_power():
+    MegaPatch.it("my_module.SOME_CONSTANT", new=2)
+
+    # good, test the public interface gives the desired result
+    assert ive_got_the_power(2) == 4
+
+    # bad, if the implementation was changed to use ** instead, this test would fail
+    patch = MegaPatch.it(pow, return_value=4)
+
+    ive_got_the_power(2)
+    assert patch.mock.called_once_with(2, 2)
+```
+
+There are some exceptions. For example, a function may invoke complex inner logic with
+a defined interface contract and you want to verify that it is interacting correctly.
+It can be time saving and also create a faster performing test to treat that inner logic
+as a black box interface you are simply feeding into and reading from.
+In this case, you may want to mock out the inner logic and verify that the outer logic is
+calling it correctly. This only makes sense if the inner logic is already well tested.
+In this case, you are treating the inner logic like a defined interface contract, and testing
+your interactions with that contract.
+
+```python
+def get_super_complex_thing_for_today(data_blob):
+    today = datetime.date.today()
+
+    return get_super_complex_thing_for_date(data_blob, date=today)
+
+
+def test_that(self) -> None:
+    data_blob = MegaMock(DataBlob)
+    today = MegaMock(datetime.date)
+    expected_return = MegaMock()
+
+    datetime_patch = MegaPatch.it(datetime.date.today, return_value=today)
+    logic_patch = MegaPatch.it(get_super_complex_thing_for_date)
+
+    # validate returning the response from the complex logic
+    assert get_super_complex_thing_for_today(data_blob) == get_super_complex_thing_for_date.return_value
+    # validate that the current date and data was passed in
+    assert Mega(logic_patch.mock).called_once_with(data_blob, date=today)
+```
+
+Use `megainstance` to go from a mock class to the mock instance. This is typically used by `MegaPatch`.
+`MegaMock.it(...)` will automatically create a mock instance of a passed in class. To create a mock class instead,
+use `my_class_mock = MegaMock.the_class(...)`. To access the instance returned, use `MegaMock(my_class_mock).megainstance`.
+Due to limitations in the Python type system, the "cast" using `MegaMock` is probably needed if you are using type checks.
+
+This library was written with a leaning towards `pytest`, which is a popular testing library. See [usage](README.md#usage-pytest) in
+the readme for more information about using the pytest plugin that comes with the library.
+
+# Common hang-ups
+Since MegaMock does the equivalent of setting `spec_set` to `True`, classes need to type hint their attributes.
+Any attribute not type hinted will result in an attribute error if you attempt to set it for the purposes of doing a test.
+
+```python
+class MyClass:
+    my_attr: str
+
+    def __init__(self):
+        self.my_attr = "foo"
+```
+
+```python
+mock = MegaMock.it(MyClass)
+mock.my_attr = "bar"
+```
+
+If you don't own the class, and it is missing the type annotations you can disable `spec_set`
+
+```python
+mock = MegaMock.it(ThirdPartyClass, spec_set=False)
+```
+
+# Advanced Use Cases
+You can mock a context manager. This is typically done through `MegaPatch.it` rather than passing around context managers as args.
+The preferred way of altering the context manager behavior is through the `set_context_manager...` `MegaPatch` methods.
+
+Setting a return value:
+```python
+megapatch = MegaPatch.it(some_context_manager)
+megapatch.set_context_manager_return_value("foo")
+
+with some_context_manager() as val:
+    assert val == "foo"
+```
+
+Setting a side-effect on entering:
+```python
+megapatch.set_context_manager_side_effect([1, 2])
+```
+
+Setting a side-effect on exiting:
+```python
+megapatch.set_context_manager_exit_side_effect(Exception("Error on file close"))
+```
+
+If for some reason you do want to deal with a `MegaMock` object directly, you will want to use the `return_value`
+of the context manager and alter the `__enter__` or `__exit__` mock functions
+
+```python
+mock = MegaMock()
+mock.return_value.__enter__.return_value = "some val"
+mock.return_value.__exit__.side_effect = Exception("Error on file close!")
+
+with pytest.raises(Exception) as exc:
+    with mock() as val:
+        assert val == "some val"
+
+assert str(exc.value) == "Error on file close!"
+```
+
+One final note with context managers created from generators - they are not intended
+to be used multiple times. This won't work:
+
+```python
+
+@contextlib.contextmanager
+def my_context_manager():
+    yield "something"
+
+manager = my_context_manager()
+
+with manager:
+    pass
+
+with manager:
+    pass
+```
+
+# Behavior differences from `mock`
+- Using `MegaMock` is like using the `mock.create_autospec()` function
+  - This means a `MegaMock` object may support `async` functionality if the mocked object is async.
+- Using `MegaPatch` is like setting `autospec=True`
+- Mocking a class by default returns an instance of the class instead of a mocked type.
+  This is like setting `instance=True` in the built-in library.
+- As mentioned earlier in the readme, you don't need to care
+  how you import something.
+- Use `MegaMock.it(spec, ...)` and `MegaPatch.it(thing, ...)` instead
+  of `MegaMock(spec=spec)` and `MegaPatch(thing=thing)`
+- Mock lacks static type inference while MegaMock provides unions
+  of the `MegaMock` object and the object used as a spec.
+
+# Debugging tools
+In addition to mocking capability, `MegaMock` objects can also help
+you debug. The `attr_assignments` dictionary, found under the `megamock`
+attribute in `MegaMock` objects, keep a record of what attributes
+were assigned, when, and what the value was. This object is a dictionary
+where the key is the attribute name, and the value is a list of
+`AttributeAssignment` objects.
+
+There is also `spied_access`, which is similar, but for
+objects that are spied.
+
+As mentioned earlier in the readme, `Mega.last_assertion_error` can
+be used to access the assertion error thrown by mock.
+
+If an attribute is coming out of a complex branch of logic with a value
+you do not expect, you can check out these attributes in the debugger
+and get an idea of where things are going wrong.
+
+To easily view the stacktrace in the IDE, there's a special property,
+`top_of_stacktrace`
+
+![Top of Stack](docs/img/top-of-stack.png)
+
+# Type Hinting
+MegaMock leverages type hinting so that your IDE can autocomplete both
+the `MegaMock` object and the object being mocked. This is done using
+a hack that returns a union of two objects while doing it in a way
+that bypasses mypy type checks. In the future, mypy may plug the hole
+which would create an issue. If you get mypy issues, the current
+recommendation is to just use `# type: ignore` and move on with your life.
+Alternatively, you can cast an object to a type to fix a problem, but
+this gets tedius.
+
+
+# Features List
+
+## Default behavior is to autospec mocks and create instances
+
+```python
+foo = MegaMock.it(Foo)  # foo is a mock instance of Foo
+
+foo.some_method(wrong, args)  # raises error
+```
+
+```python
+FooMock = MegaMock.the_class(Foo)  # FooMock is a type
+```
+
+## Patch objects by simply passing them in. Patches start automatically
+
+```python
+MegaPatch.it(Foo)
+```
+
+
+## When patch is used, all locations are patched
+
+```python
+# module A is patched
+from my_module import Foo
+
+# module B is also patched
+import my_module
+
+my_module.Foo
+```
+
+## Restore real logic
+
+```python
+Mega(my_mock.some_method).use_real_logic()
+```
+
+## Static type hinting support
+
+![Type hints](docs/img/type-hinting.png)
+
+## PyTest plugin
+
+```toml
+[tool.pytest.ini_options]
+addopts = "-p megamock.plugins.pytest"
+```
+
+## For pytest, assert using the assert statement instead of assert functions
+
+```python
+assert Mega(my_mock.some_method).called_with(1, 2, 3)
+```
+
+## See where assignments and spied attribute access happens in the stack
+
+![Stack](docs/img/top-of-stack.png)
+
+## Access helpers
+
+```python
+my_patch = MegaPatch.it(Foo)
+my_patch.megainstance  # the instance (instead of class) mock
+
+# context manager helpers
+my_patch.set_context_manager_return_value(1)
+my_patch.set_context_manager_side_effect(Exception("IO Error!"))
+my_patch.set_context_manager_exit_side_effect(Exception("Failed to close transaction!"))
+```
+
+## Human friendly names via `meganame`
+
+```python
+returned = my_mock()
+expected = a_different_mock()
+
+assert returned == expected, f"Expected {returned.meganame} got {expected.meganame}"
+```
+
+
+Examples from tests:
+
+import asyncio
+import inspect
+from contextlib import contextmanager
+from typing import Generator, cast
+from unittest import mock
+
+import pytest
+
+from megamock import MegaMock, name_words
+from megamock.megamocks import (
+    AsyncMegaMock,
+    AttributeTrackingBase,
+    NonCallableMegaMock,
+    UseRealLogic,
+)
+from megamock.megapatches import MegaPatch
+from megamock.megas import Mega
+from tests.unit.conftest import SomeClass
+from tests.unit.simple_app.bar import Bar
+from tests.unit.simple_app.foo import Foo
+from tests.unit.simple_app.generics import UsesGenerics
+from tests.unit.simple_app.nested_classes import NestedParent
+from tests.unit.simple_app.pydantic_objects import Child, Parent
+
+
+class TestAttributeTrackingBase:
+    class Sample(AttributeTrackingBase):
+        def __init__(self) -> None:
+            import traceback
+
+            self.stacktrace = traceback.extract_stack()[::-1]
+
+    def test_top_of_stacktrace_breaks_up_lines(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+        assert len(obj.top_of_stacktrace) == 10
+
+    def test_top_of_stacktrace_shortens_path(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+        assert obj.top_of_stacktrace[0].startswith("...")
+
+    def test_top_of_stacktrace_root_folder(self) -> None:
+        obj = TestAttributeTrackingBase.Sample()
+
+        MegaPatch.it(
+            AttributeTrackingBase.format_stacktrace,
+            return_value=['"file_in_root.py", line 1,  something something'],
+        )
+        assert obj.top_of_stacktrace[0].startswith('"file_in_root.py')
+
+
+class TestMegaMock:
+    def test_allows_no_args(self) -> None:
+        MegaMock()
+
+    def test_return_value_when_no_args(self) -> None:
+        assert isinstance(MegaMock()(), MegaMock)
+
+    def test_side_effect_value(self) -> None:
+        mega_mock = MegaMock(side_effect=lambda: 5)
+
+        assert mega_mock() == 5
+
+    def test_function_spec_with_return_value(self) -> None:
+        def some_func(val: str) -> str:
+            return val
+
+        mega_mock = MegaMock.this(some_func, return_value="foo")
+        assert mega_mock("input val") == "foo"
+
+        with pytest.raises(TypeError):
+            mega_mock()  # type: ignore
+
+    def test_call_args_update(self) -> None:
+        mega_mock = MegaMock()
+        mega_mock()
+
+        assert mega_mock.call_count == 1
+        assert mega_mock.call_args_list == [mock.call()]
+
+    def test_not_awaitable(self) -> None:
+        assert asyncio.iscoroutinefunction(MegaMock()) is False
+        assert inspect.isawaitable(MegaMock()) is False
+
+    async def test_when_async_function_is_spec_then_awaitable(self) -> None:
+        async def some_func() -> str:
+            return "s"
+
+        mega_mock = MegaMock.this(some_func)
+        assert asyncio.iscoroutinefunction(mega_mock) is True
+        assert inspect.isawaitable(mega_mock()) is True
+
+    def test_assigning_return_value(self) -> None:
+        mega_mock = MegaMock.it(Foo)
+        mega_mock.some_method.return_value = "foo"
+
+        assert mega_mock.some_method() == "foo"
+
+    def test_allows_for_setting_different_type(self) -> None:
+        mega_mock: Foo = MegaMock.it(Foo)  # mypy should not care
+
+        assert mega_mock.z
+
+    def test_assert_called_once_with(self) -> None:
+        mega_mock = MegaMock.this(Foo)
+
+        mega_mock("s")
+
+        mega_mock.assert_called_once_with("s")  # type: ignore
+
+        with pytest.raises(AssertionError):
+            mega_mock.assert_called_once_with("t")  # type: ignore
+
+    def test_return_value_equality_set_in_params(self) -> None:
+        result = MegaMock()
+        callable = MegaMock(return_value=result)
+        callable.return_value = result
+
+        assert callable("foo", "bar") is result
+
+    def test_return_value_equality_set_via_attribute(self) -> None:
+        result = MegaMock()
+        callable = MegaMock()
+        callable.return_value = result
+
+        assert callable("foo", "bar") is result
+
+    def test_meganame(self) -> None:
+        mega_mock = MegaMock()
+        adjective, noun, number = mega_mock.meganame.split(" ")
+        assert adjective in name_words.ADJECTIVES
+        assert noun in name_words.NOUNS
+        int(number)  # shouldn't error
+
+    def test_nested_assignment(self) -> None:
+        mock = MegaMock()
+        mock.option.collectonly = False
+
+        assert mock.option.collectonly is False
+
+    class TestGenerateMockName:
+        def test_name_of_class(self) -> None:
+            mega_mock = MegaMock.this(Foo)
+            assert "name='Foo'" in str(mega_mock)
+
+        def test_name_of_method(self) -> None:
+            mega_mock = MegaMock.it(Foo)
+            child_mock = mega_mock.some_method()
+            assert "name='Foo.some_method() -> str'" in str(child_mock)
+
+        def test_name_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+
+            assert "name='MegaMock()'" in str(mock)
+
+        def test_child_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+
+            assert "name='MegaMock()()'" in str(mock())
+
+        def test_attribute_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+            child_mock = mock.some_attribute
+
+            assert "name='MegaMock().some_attribute'" in str(child_mock)
+
+        def test_nested_attribute_of_mock_with_no_spec(self) -> None:
+            mock = MegaMock()
+            child_mock = mock.some_attribute.some_other_attribute
+
+            assert "name='MegaMock().some_attribute.some_other_attribute'" in str(
+                child_mock
+            )
+
+        def test_nested_objects(self) -> None:
+            mock = MegaMock.this(NestedParent)
+            result = mock.NestedChild.AnotherNestedChild.static_z()
+
+            assert (
+                "name='NestedParent.NestedChild.AnotherNestedChild.static_z() -> str'"
+                in str(result)
+            )
+
+        def test_cached_property(self) -> None:
+            mock = MegaMock.this(Foo)
+            assert "name='Foo.helpful_manager" in str(mock.helpful_manager)
+
+        def test_method_return_value(self) -> None:
+            mock = MegaMock.it(Foo)
+            assert "name='Foo.get_a_manager() -> HelpfulManager'" in str(
+                mock.get_a_manager()
+            )
+
+        def test_method_return_value_attribute(self) -> None:
+            mock = MegaMock.it(Foo)
+            assert "name='Foo.get_a_manager() -> HelpfulManager.a'" in str(
+                mock.get_a_manager().a
+            )
+
+    class TestMockingAClass:
+        def test_classes_default_to_instance(self) -> None:
+            mock_instance: SomeClass = MegaMock.it(SomeClass)
+
+            with pytest.raises(AttributeError):
+                mock_instance.does_not_exist  # type: ignore
+
+            mock_instance.b()
+
+        def test_can_create_mock_for_class_itself(self) -> None:
+            mock_class: type[SomeClass] = MegaMock.this(SomeClass)
+
+            mock_class.c
+
+        def test_mock_classes_do_not_have_undefined_attributes(self) -> None:
+            mock_class: type[SomeClass] = MegaMock.this(SomeClass)
+
+            with pytest.raises(AttributeError):
+                mock_class.a
+
+        def test_delimited_attributes_are_allowed_if_spec_set_is_true(self) -> None:
+            mock_instance: SomeClass = MegaMock.this(SomeClass, spec_set=True)
+
+            mock_instance.a = "some str"
+
+        def test_spec_set_with_annotations_enforces_type(self) -> None:
+            mock_instance: SomeClass = MegaMock.this(SomeClass, spec_set=True)
+
+            with pytest.raises(TypeError) as exc:
+                mock_instance.a = 12345  # type: ignore
+
+            assert str(exc.value) == "12345 is not an instance of str | None"
+
+        def test_spec_set_with_annotations_allows_mock_objects(self) -> None:
+            mock_instance: SomeClass = MegaMock.this(SomeClass, spec_set=True)
+
+            mock_instance.a = MegaMock.this(str)
+
+        def test_spec_set_defaults_to_true(self) -> None:
+            mock_instance: SomeClass = MegaMock.this(SomeClass, spec_set=True)
+
+            with pytest.raises(AttributeError):
+                mock_instance.does_not_exist = 5  # type: ignore
+
+        def test_callable_classes_are_callable(self) -> None:
+            mock_instance = MegaMock.this(Bar)
+
+            mock_instance()
+
+        def test_callable_return_type_matches_annotations(self) -> None:
+            with pytest.raises(TypeError):
+                MegaMock.it(Foo).some_method()()  # type: ignore
+
+            mock_instance = MegaMock.this(Bar)
+
+            with pytest.raises(TypeError):
+                mock_instance()()
+
+        def test_noncallable_classes_are_not_callable(self) -> None:
+            mock_instance = MegaMock.it(Foo)
+
+            with pytest.raises(TypeError):
+                mock_instance()  # type: ignore
+
+    class TestFromLegacyMock:
+        def test_when_autospec_used_on_class(self) -> None:
+            legacy_mock = mock.create_autospec(SomeClass)
+            mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
+
+            assert mega_mock.megamock.spec is SomeClass  # type: ignore
+            assert hasattr(mega_mock, "b")
+
+            assert isinstance(mega_mock.b, MegaMock)
+            assert isinstance(mega_mock.c, NonCallableMegaMock)
+
+            assert isinstance(mega_mock.return_value, NonCallableMegaMock)  # type: ignore
+
+        def test_when_regular_mock(self) -> None:
+            legacy_mock = mock.Mock()
+            legacy_mock.b = mock.Mock()
+            legacy_mock.c = mock.NonCallableMock()
+
+            mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
+
+            assert mega_mock.megamock.spec is SomeClass  # type: ignore
+            assert hasattr(mega_mock, "b")
+
+            assert isinstance(mega_mock.b, MegaMock)
+            assert isinstance(mega_mock.c, NonCallableMegaMock)
+
+        def test_when_magic_mock(self) -> None:
+            legacy_mock = mock.MagicMock()
+            legacy_mock.b = mock.MagicMock()
+            legacy_mock.c = mock.NonCallableMagicMock()
+
+            mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec=SomeClass)
+
+            assert mega_mock.megamock.spec is SomeClass  # type: ignore
+            assert hasattr(mega_mock, "b")
+
+            assert isinstance(mega_mock.b, MegaMock)
+            assert isinstance(mega_mock.c, NonCallableMegaMock)
+
+        def test_when_non_callable_mock(self) -> None:
+            legacy_mock = mock.NonCallableMock()
+
+            mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec="a")
+
+            assert isinstance(mega_mock, NonCallableMegaMock)
+
+        def test_when_non_callable_magic_mock(self) -> None:
+            legacy_mock = mock.NonCallableMagicMock()
+
+            mega_mock = MegaMock.from_legacy_mock(legacy_mock, spec="a")
+
+            assert isinstance(mega_mock, NonCallableMegaMock)
+
+    class TestMegaMockAttributeAssignment:
+        def test_grabs_expected_stacktrace(self) -> None:
+            mega_mock: MegaMock = MegaMock()
+
+            mega_mock.foo = "bar"
+
+            assert "foo" in mega_mock.megamock.attr_assignments
+            stacktrace = mega_mock.megamock.attr_assignments["foo"][0].stacktrace
+            assert len(stacktrace) > 5
+            for frame in stacktrace:
+                assert "/megamocks.py" not in frame.filename
+
+        def test_multiple_assignments(self) -> None:
+            mega_mock: MegaMock = MegaMock()
+            mega_mock.foo = "foo"
+            mega_mock.bar = "bar"
+
+            mega_mock.foo = "second"
+
+            assert len(mega_mock.megamock.attr_assignments["foo"]) == 2
+            assert len(mega_mock.megamock.attr_assignments["bar"]) == 1
+
+            assert mega_mock.megamock.attr_assignments["foo"][0].attr_value == "foo"
+            assert mega_mock.megamock.attr_assignments["foo"][1].attr_value == "second"
+
+    class TestWraps:
+        def test_wraps_object(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock.this(wraps=obj)
+
+            assert mega_mock.some_method() == "value"
+            assert len(cast(MegaMock, mega_mock.some_method).call_args_list) == 1
+
+        def test_wraps_has_same_warts_as_magicmock(self) -> None:
+            obj = Foo("s")
+            mega_mock = MegaMock.this(wraps=obj)
+
+            assert isinstance(mega_mock.s, MegaMock)
+
+    class TestSpy:
+        @pytest.fixture(autouse=True)
+        def setup(self) -> None:
+            self.obj = Foo("s")
+            self.mega_mock = MegaMock.this(spy=self.obj)
+
+        def test_equivalent_to_wraps_for_methods(self) -> None:
+            assert self.mega_mock.some_method() == "value"
+            assert len(cast(MegaMock, self.mega_mock.some_method).call_args_list) == 1
+
+        def test_supports_properties(self) -> None:
+            self.mega_mock._s = "str"
+            assert self.mega_mock.s == "str"
+
+        def test_supports_attributes(self) -> None:
+            assert self.mega_mock._s == "s"
+
+        def test_spies_on_attribute_access(self) -> None:
+            mega_mock = self.mega_mock
+            mega_mock.z
+            mega_mock.moo
+            mega_mock.helpful_manager
+
+            assert len(MegaMock(mega_mock).megamock.spied_access) == 3
+            assert (
+                MegaMock(mega_mock)
+                .megamock.spied_access["z"][0]
+                .stacktrace[0]
+                .filename.endswith("test_megamocks.py")
+            )
+
+        def test_supports_megacast(self) -> None:
+            assert self.mega_mock.some_method() == "value"
+
+    class TestAsyncMock:
+        async def test_async_mock_basics(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
+            assert asyncio.iscoroutinefunction(mega_mock) is True
+            mock_coroutine = mega_mock()
+            assert inspect.isawaitable(mock_coroutine) is True
+
+            await mock_coroutine
+            assert mega_mock.await_count == 1
+
+        async def test_function_side_effect(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=lambda: 5)
+
+            result = await mega_mock()
+            assert result == 5
+            assert mega_mock.call_count == 1
+
+        async def test_exception_side_effect(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=Exception("whoops!"))
+
+            with pytest.raises(Exception) as exc:
+                await mega_mock()
+
+            assert str(exc.value) == "whoops!"
+
+        async def test_iterable_side_effect(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock(side_effect=[1, 2, 3])
+
+            first = await mega_mock()
+            second = await mega_mock()
+            third = await mega_mock()
+
+            assert [first, second, third] == [1, 2, 3]
+
+        async def test_return_value_provided(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock(return_value=25)
+
+            assert await mega_mock() == 25
+
+        async def test_defaults_to_async_mega_mock_return(self) -> None:
+            assert isinstance(AsyncMegaMock(), AsyncMegaMock)
+
+            await AsyncMegaMock()()
+
+        async def test_altering_return_value(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
+            mega_mock.return_value.return_value = 5
+
+            result = await mega_mock()
+            assert await result() == 5
+
+        async def test_async_spec(self) -> None:
+            async def some_func(val: str) -> str:
+                return val
+
+            mega_mock: AsyncMegaMock = AsyncMegaMock(
+                some_func, return_value="actual return"
+            )
+            assert await mega_mock("input val") == "actual return"
+
+            with pytest.raises(TypeError):
+                await mega_mock()
+
+        async def test_await_args(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
+
+            await mega_mock("foo", keyword_arg="bar")
+            assert mega_mock.await_args == mock.call("foo", keyword_arg="bar")
+
+        async def test_await_args_list(self) -> None:
+            mega_mock: AsyncMegaMock = AsyncMegaMock()
+
+            await mega_mock("first")
+            await mega_mock("second", keyword_arg="kwsecond")
+
+            expected_await_args_list = [
+                mock.call("first"),
+                mock.call("second", keyword_arg="kwsecond"),
+            ]
+            assert mega_mock.await_args_list == expected_await_args_list
+
+    class TestUseRealLogic:
+        def test_will_use_real_method_values(self) -> None:
+            mega_mock = MegaMock.this(Foo("s"), spec_set=False)
+
+            # check preconditions
+            assert isinstance(mega_mock.some_method(), MegaMock)
+
+            mega_mock.some_method.return_value = UseRealLogic
+
+            assert mega_mock.some_method() == "value"
+
+        def test_real_logic_uses_mock_object_values(self) -> None:
+            mega_mock = MegaMock.this(Foo("s"))
+            mega_mock.moo = "fox"
+            MegaMock(mega_mock.what_moos).return_value = UseRealLogic
+
+            assert mega_mock.what_moos() == "The fox moos"
+
+        def test_real_logic_with_class_instance_shortcut(self) -> None:
+            mega_mock = MegaMock.it(Foo)
+            mega_mock.moo = "fox"
+            MegaMock(mega_mock.what_moos).return_value = UseRealLogic
+
+            assert mega_mock.what_moos() == "The fox moos"
+
+        def test_function_call_on_mock_object(self) -> None:
+            mega_mock = MegaMock.this(Foo("s"))
+            mega_mock.moo = "fox"
+            Mega(mega_mock.what_moos).use_real_logic()
+
+            assert mega_mock.what_moos() == "The fox moos"
+
+        def test_function_call_on_cast_object(self) -> None:
+            mega_mock = MegaMock.this(Foo("s"))
+            mega_mock.moo = "fox"
+            Mega(mega_mock.what_moos).use_real_logic()
+
+            assert mega_mock.what_moos() == "The fox moos"
+
+    class TestMegaCast:
+        def test_cast_types_to_the_spec_with_type(self) -> None:
+            mega_mock = MegaMock.this(Foo)
+            mega_mock.z = "z"
+
+            assert mega_mock.z == "z"
+
+        def test_cast_types_to_the_spec_with_instance(self) -> None:
+            mega_mock = MegaMock.this(Foo("s"))
+            mega_mock.z = "z"
+
+            assert mega_mock.z == "z"
+
+        def test_using_function(self) -> None:
+            def some_func(val: str) -> str:
+                return val
+
+            mega_mock = MegaMock.this(some_func)
+            mega_mock.__module__  # should have no mypy errors
+
+    class TestMegaInstance:
+        def test_using_class(self) -> None:
+            mega_mock = MegaMock.the_class(Foo)
+
+            megainstance = MegaMock(mega_mock).megainstance
+            megainstance.s  # should have no mypy errors
+            MegaMock(mega_mock).megainstance.moo = "fox"
+
+            # check preconditions
+            assert cast(Foo, mega_mock("s")).moo == "fox"  # should not error
+
+            assert MegaMock(mega_mock).megainstance is mega_mock("s")
+
+        def test_errors_if_not_a_class(self) -> None:
+            mega_mock = MegaMock.it(Foo)
+
+            with pytest.raises(Exception) as exc:
+                mega_mock.megainstance  # type: ignore
+
+            assert (
+                str(exc.value)
+                == "The megainstance property was intended for class mocks"
+            )
+
+        def test_calling_method_from_mega_instance(self) -> None:
+            mega_mock = MegaMock.the_class(Foo)
+            MegaMock(mega_mock).megainstance.some_method()
+
+    class TestMockingContextManager:
+        @pytest.fixture(autouse=True)
+        def setup(self) -> None:
+            self.before = False
+            self.after = False
+
+            # a test context manager
+            @contextmanager
+            def my_context_manager() -> Generator:
+                self.before = True
+                yield "foo"
+                self.after = True
+
+            self.context_manager = my_context_manager
+
+        def test_preconditions(self) -> None:
+            # not a real test
+            # just ensure the tests are set up correctly
+
+            assert self.before is False
+
+            with self.context_manager() as value:
+                assert self.before is True
+                assert value == "foo"
+                assert self.after is False
+
+            assert self.after is True
+
+        def test_mocking_context_manager(self) -> None:
+            mega_mock = MegaMock.this(self.context_manager)
+            mega_mock.return_value.return_value = "mocked"
+
+            with mega_mock() as val:
+                assert val == "mocked"
+
+            assert self.before is False
+            assert self.after is False
+
+        def test_use_real_logic(self) -> None:
+            mega_mock = MegaMock.this(self.context_manager())
+
+            Mega(mega_mock).use_real_logic()
+
+            with mega_mock as val:
+                assert val == "foo"
+
+            assert self.after is True
+
+        def test_attempting_to_use_non_contextmanager(self) -> None:
+            mega_mock = MegaMock.this(Foo)
+
+            with pytest.raises(TypeError) as exc:
+                with mega_mock:  # type: ignore
+                    pass
+
+            assert (
+                str(exc.value)
+                == "'Foo' object does not support the context manager protocol"
+            )
+
+        def test_no_spec_supports_context_manager(self) -> None:
+            with MegaMock():
+                pass
+
+        def test_spy_supports_context_manager(self) -> None:
+            mega_mock = MegaMock.this(spy=self.context_manager())
+
+            with mega_mock as val:
+                assert val == "foo"
+
+    class TestGetCallSpec:
+        def test_when_annotations_are_missing(self) -> None:
+            mock = MegaMock.this(object())
+            assert mock._get_call_spec() is None  # type: ignore
+
+        def test_when_return_annotation_not_provided(self) -> None:
+            def some_func(arg: str):
+                return "foo"
+
+            mock = MegaMock.this(some_func)
+            assert mock._get_call_spec() is None
+
+        def test_when_annotations_are_provided(self) -> None:
+            def some_func(arg: str) -> str:
+                return "foo"
+
+            mock = MegaMock.this(some_func)
+            assert not callable(mock._get_call_spec())
+
+    class TestPydanticObjects:
+        @pytest.mark.xfail
+        def test_mocking_nested_attributes(self) -> None:
+            mega_mock = MegaMock.it(Parent)
+            mega_mock.child.attribute = "foo"  # type: ignore
+
+        def test_split_out_attributes(self) -> None:
+            mega_mock = MegaMock.it(Parent)
+            mega_mock.child = MegaMock.this(Child)
+            mega_mock.child.attribute = "foo"
+
+    class TestSubscriptedGenerics:
+        def test_assigning_to_subscripted_generic_function(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+            mock.my_func = lambda x: str(x)
+
+            assert mock.my_func(5) == "5"
+
+        def test_assigning_to_subscripted_generic_collection(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+            mock.my_thing = ["foo", "bar"]
+
+            assert mock.my_thing == ["foo", "bar"]
+
+        def test_assigning_nested_generic(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+            mock.my_iter = [["foo", "bar"]]
+
+            for item in mock.my_iter:
+                assert item == ["foo", "bar"]
+
+        def test_wrong_assignment(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+
+            with pytest.raises(TypeError):
+                mock.my_func = 5  # type: ignore
+
+            with pytest.raises(TypeError):
+                mock.my_thing = lambda x: str(x)  # type: ignore
+
+        @pytest.mark.xfail
+        def test_wrong_function_argument_type(self) -> None:
+            mock = MegaMock.it(UsesGenerics)
+
+            def single_arg_wrong_type(s: str):
+                return 25
+
+            with pytest.raises(TypeError):
+                mock.my_func = single_arg_wrong_type  # type: ignore
+
+
+from unittest import mock
+
+import pytest
+
+from megamock import MegaPatch
+from megamock.megamocks import NonCallableMegaMock, UseRealLogic
+from megamock.megapatches import MegaMock, MegaPatchContext
+from megamock.megas import Mega
+from tests.unit.simple_app import bar as other_bar
+from tests.unit.simple_app import foo, nested_classes
+from tests.unit.simple_app.async_portion import (
+    SomeClassWithAsyncMethods,
+    an_async_function,
+)
+from tests.unit.simple_app.bar import Bar, some_context_manager, some_func
+from tests.unit.simple_app.bar import some_func as some_other_func
+from tests.unit.simple_app.does_rename import func_that_uses_foo as func_uses_foo
+from tests.unit.simple_app.foo import Foo, bar, foo_instance
+from tests.unit.simple_app.foo import Foo as OtherFoo
+from tests.unit.simple_app.foo import bar as other_bar_constant
+from tests.unit.simple_app.helpful_manager import HelpfulManager
+from tests.unit.simple_app.locks import SomeLock
+from tests.unit.simple_app.nested_classes import NestedParent
+from tests.unit.simple_app.uses_nested_classes import (
+    get_nested_class_attribute_value,
+    get_nested_class_function_value,
+)
+from tests.unit.simple_app.uses_nested_classes import (
+    get_nested_class_attribute_value as another_nested_class_attr,
+)
+
+
+class TestMegaPatchContext:
+    def test_active_patches(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch)
+        assert megapatch in megapatch_context.active_patches()
+
+    def test_add_remove(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch)
+        assert megapatch in megapatch_context.active_patches()
+        megapatch_context.remove(megapatch)
+        assert megapatch not in megapatch_context.active_patches()
+
+    def test_stop_all(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch1 = MegaMock.it(MegaPatch)
+        megapatch2 = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch1)
+        megapatch_context.add(megapatch2)
+        megapatch_context.stop_all()
+        assert Mega(megapatch1.stop).called_once()
+        assert Mega(megapatch2.stop).called_once()
+
+    def test_context_manager(self) -> None:
+        context_stack_length = len(MegaPatch.context_stack)
+        with MegaPatchContext() as context:
+            assert MegaPatch.context_stack[-1] is context
+            assert len(MegaPatch.context_stack) == context_stack_length + 1
+        assert MegaPatch.context_stack[-1] is not context
+        assert len(MegaPatch.context_stack) == context_stack_length
+
+    def test_delete(self) -> None:
+        megapatch_context = MegaPatchContext()
+        megapatch = MegaMock.it(MegaPatch)
+        megapatch_context.add(megapatch)
+        del megapatch_context
+        assert Mega(megapatch.stop).called_once()
+
+
+class TestMegaPatchPatching:
+    def test_patch_class_itself(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.new_value.z = "a"
+
+        assert Foo.z == "a"
+        Foo("s")  # should work
+
+        # sanity check, instance should NOT work because it doesn't support calling
+        with pytest.raises(TypeError):
+            Foo("s")()  # type: ignore
+
+    def test_patch_class_instance_from_type(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.return_value.z = "b"
+
+        assert Foo("").z == "b"
+
+    def test_patch_from_module_reference(self) -> None:
+        patch = MegaPatch.it(foo.Foo)
+        patch.return_value.z = "b"
+
+        assert Foo("").z == "b"
+
+    def test_patch_global_module_variable(self) -> None:
+        MegaPatch.it(bar, new="a")
+
+        assert foo.bar == "a"
+
+    def test_patch_class_attribute(self) -> None:
+        MegaPatch.it(Foo.moo, new="dog")
+
+        assert Foo.moo == "dog"
+
+    def test_patch_class_method_supports_return_value_as_arg(self) -> None:
+        MegaPatch.it(Foo.some_method, return_value="foo")
+        assert Foo("s").some_method() == "foo"
+
+    def test_patch_class_method_from_module_reference(self) -> None:
+        MegaPatch.it(foo.Foo.some_method, return_value="foo")
+        assert Foo("s").some_method() == "foo"
+
+    def test_patch_class_method_supports_return_value_as_attribute(self) -> None:
+        megapatch = MegaPatch.it(Foo.some_method)
+        megapatch.new_value.return_value = "foo"
+        assert Foo("s").some_method() == "foo"
+
+    def test_mock_is_synonym_for_new_value_when_a_mock(self) -> None:
+        megapatch = MegaPatch.it(Foo.some_method)
+        megapatch.mock.return_value = "foo"
+        assert Foo("s").some_method() == "foo"
+
+    def test_mock_raises_type_error_if_new_value_is_not_a_mock(self) -> None:
+        megapatch = MegaPatch.it(Foo.some_method, new="foo")
+
+        with pytest.raises(ValueError) as exc:
+            megapatch.mock
+
+        assert str(exc.value) == "New value 'foo' is not a mock!"
+
+    def test_patch_megamock_object(self) -> None:
+        MegaPatch.it(Foo)
+        MegaPatch.it(Foo.moo, new="dog")
+
+    def test_patch_property(self) -> None:
+        expected = "dog"
+        MegaPatch.it(Foo.moo, new=expected)
+
+        assert Foo("").moo == expected
+
+    def test_patch_cached_property(self) -> None:
+        expected = MegaMock.it(spec=HelpfulManager)
+        MegaPatch.it(Foo.helpful_manager, new=expected)
+
+        assert Foo("").helpful_manager is expected
+
+    def test_patch_nested_class_function(self) -> None:
+        MegaPatch.it(NestedParent.NestedChild.AnotherNestedChild.z, return_value="a")
+
+        assert get_nested_class_function_value() == "a"
+
+    def test_patch_nested_class_attribute(self) -> None:
+        MegaPatch.it(NestedParent.NestedChild.AnotherNestedChild.a, new="z")
+
+        assert get_nested_class_attribute_value() == "z"
+
+    def test_patch_renamed_class_method(self) -> None:
+        MegaPatch.it(OtherFoo.some_method, return_value="sm")
+
+        assert Foo("s").some_method() == "sm"
+
+    def test_patch_renamed_class(self) -> None:
+        MegaPatch.it(OtherFoo)
+
+        assert isinstance(Foo("s"), NonCallableMegaMock)
+
+    def test_patch_renamed_function(self) -> None:
+        MegaPatch.it(some_other_func, return_value="r")
+
+        assert other_bar.some_func("v") == "r"
+        assert some_other_func("v") == "r"
+
+    def test_patch_renamed_nested_class(self) -> None:
+        MegaPatch.it(NestedParent.NestedChild.AnotherNestedChild.a, new="b")
+
+        assert NestedParent.NestedChild.AnotherNestedChild().a == "b"
+        assert nested_classes.NestedParent.NestedChild.AnotherNestedChild().a == "b"
+
+    def test_patch_renamed_parent_module(self) -> None:
+        MegaPatch.it(other_bar.some_func, return_value="r")
+
+        assert other_bar.some_func("v") == "r"
+        assert some_other_func("v") == "r"
+
+    def test_patch_renamed_constant_primitive(self) -> None:
+        MegaPatch.it(other_bar_constant, new="new_val")
+
+        assert other_bar_constant == "new_val"
+        assert foo.bar == "new_val"
+
+    def test_patch_that_is_renamed_in_non_test_module_1(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.megainstance.some_method.return_value = "it worked"
+
+        assert func_uses_foo() == "it worked"
+
+    def test_patch_that_is_renamed_in_non_test_module_2(self) -> None:
+        from tests.unit.simple_app.does_rename import MyFoo
+
+        patch = MegaPatch.it(MyFoo)
+        patch.megainstance.some_method.return_value = "it worked"
+
+        assert func_uses_foo() == "it worked"
+
+    def test_renamed_multiline(self) -> None:
+        patch = MegaPatch.it(get_nested_class_attribute_value)
+        patch.mock.return_value = "foo"
+
+        assert another_nested_class_attr() == "foo"
+
+    @pytest.mark.xfail
+    def test_patch_with_real_logic(self) -> None:
+        # this currently fails because the object created by autospec
+        # isn't using the MegaMock code path
+        MegaPatch.it(Foo.some_method, return_value=UseRealLogic)
+
+        assert Foo("s").some_method() == "a"
+
+    def test_patch_class_and_enable_real_logic(self) -> None:
+        megapatch = MegaPatch.it(Foo)
+
+        Mega(megapatch.megainstance.some_method).use_real_logic()
+
+        assert Foo("s").some_method() == "value"
+
+    def test_setting_side_effect(self) -> None:
+        MegaPatch.it(Foo.some_method, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").some_method()
+
+        assert str(exc.value) == "Error!"
+
+    def test_setting_side_effect_to_a_property(self) -> None:
+        MegaPatch.it(Foo.zzz, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").zzz
+
+        assert str(exc.value) == "Error!"
+
+    def test_setting_side_effect_to_a_cached_property(self) -> None:
+        MegaPatch.it(Foo.helpful_manager, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").helpful_manager
+
+        assert str(exc.value) == "Error!"
+
+    def test_stacked_patching_return_value(self) -> None:
+        MegaPatch.it(Foo)
+        MegaPatch.it(Foo.some_method, return_value="new val")
+
+        assert Foo("s").some_method() == "new val"
+
+    def test_stacked_patching_side_effect(self) -> None:
+        MegaPatch.it(Foo)
+        MegaPatch.it(Foo.some_method, side_effect=Exception("Error!"))
+
+        with pytest.raises(Exception) as exc:
+            Foo("s").some_method()
+
+        assert str(exc.value) == "Error!"
+
+    @pytest.mark.xfail
+    def test_assigning_return_value_later_on_class_mock_reflected_in_instance(
+        self,
+    ) -> None:
+        # there's no magic that allows this to work
+        patch = MegaPatch.it(Foo)
+        patch.mock.some_method.return_value = "new val"
+
+        assert Foo("s").some_method() == "new val"
+
+
+class TestMegaPatchAutoStart:
+    def test_enabled_by_default(self) -> None:
+        MegaPatch.it(Foo.helpful_manager, new="something")
+
+        assert Foo("").helpful_manager == "something"
+
+    def test_can_be_disabled(self) -> None:
+        MegaPatch.it(Foo.helpful_manager, new="something", autostart=False)
+
+        assert isinstance(Foo("").helpful_manager, HelpfulManager)
+
+
+class TestMegaPatchSpec:
+    def test_uses_autospec(self) -> None:
+        MegaPatch.it(Foo)
+
+        with pytest.raises(TypeError):
+            Foo()  # type: ignore
+
+    def test_can_override_autospec(self) -> None:
+        MegaPatch.it(Foo, autospec=False)
+
+        Foo()  # type: ignore
+
+
+class TestMegaPatchReturnValue:
+    def test_when_new_is_not_a_function_then_return_value_is_none(self) -> None:
+        patch = MegaPatch.it(bar, new="a")
+
+        assert patch.return_value is None
+
+    def test_return_value_when_mocking_a_function(self) -> None:
+        patch = MegaPatch.it(some_func)
+
+        assert patch.return_value is some_func("a")
+
+    def test_return_value_for_class_is_the_instance_object(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        assert patch.return_value is Foo("s")
+
+    def test_megainstance_for_class_is_the_instance_object(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        assert patch.megainstance is Foo("s")
+
+    def test_provided_return_value_is_the_return_value(self) -> None:
+        ret_val: MegaMock = MegaMock()
+        patch = MegaPatch.it(some_func, return_value=ret_val)
+
+        assert patch.return_value is ret_val
+
+    def test_assigning_patch_return_value_directly(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        patch.return_value = 5
+
+        assert Foo("s") == 5
+        assert patch.return_value == 5
+
+    def test_assigning_patch_return_value_directly_on_method(self) -> None:
+        patch = MegaPatch.it(Foo.some_method)
+
+        patch.return_value = 5
+
+        assert Foo("s").some_method() == 5
+        assert patch.return_value == 5
+
+    def test_return_value_has_changable_return_value(self) -> None:
+        patch = MegaPatch.it(Bar)
+
+        patch.return_value.return_value = "something"
+
+        assert Bar()() == "something"
+
+    def test_can_enable_real_logic_on_mock(self) -> None:
+        patch = MegaPatch.it(Foo)
+        patch.return_value.some_method.return_value = UseRealLogic
+
+        assert Foo("s").some_method() == "value"
+
+    def test_enable_real_logic_mega(self) -> None:
+        patch = MegaPatch.it(Foo)
+        Mega(patch.return_value.some_method).use_real_logic()
+
+        assert Foo("s").some_method() == "value"
+
+    # https://github.com/JamesHutchison/megamock/issues/75
+    @pytest.mark.xfail
+    def test_using_actual_thing_to_enable_real_logic(self) -> None:
+        # must use the mock to assign real logic
+        MegaPatch.it(Foo)
+        Mega(Foo.some_method).use_real_logic()
+
+        assert Foo("s").some_method() == "value"
+
+
+class TestMegaPatchObject:
+    # Issue https://github.com/JamesHutchison/megamock/issues/8
+    @pytest.mark.xfail
+    def test_patching_local_object(self) -> None:
+        my_obj = Foo("s")
+        MegaPatch.it(my_obj.moo, new="moooo")
+
+        assert Foo("s").moo == "cow"
+        assert my_obj.moo == "moooo"
+
+    def test_patching_module_level_object(self) -> None:
+        MegaPatch.it(foo_instance.moo, new="moooo")
+
+        assert Foo("s").moo == "cow"
+        assert foo_instance.moo == "moooo"
+
+
+class TestAsyncPatching:
+    async def test_patching_async_function(self) -> None:
+        MegaPatch.it(an_async_function, return_value="val")
+
+        assert await an_async_function("s") == "val"
+
+    async def test_patching_async_method(self) -> None:
+        MegaPatch.it(SomeClassWithAsyncMethods.some_method, return_value="val")
+
+        assert await SomeClassWithAsyncMethods().some_method("s") == "val"
+
+
+class TestGotchaCheck:
+    def test_raises_value_error_if_autospec_and_use_real_logic(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo, autospec=True, return_value=UseRealLogic)
+
+
+class TestNewCallable:
+    def test_new_callable(self) -> None:
+        def foo() -> str:
+            return "foo"
+
+        MegaPatch.it(Foo, new_callable=foo)
+
+        assert Foo == "foo"
+
+    def test_combining_new_and_new_callable(self) -> None:
+        with pytest.raises(ValueError) as exc:
+            MegaPatch.it(Foo, new="hi", new_callable=mock.Mock)
+
+        assert str(exc.value) == "Cannot use 'new' and 'new_callable' together"
+
+    def test_combining_return_value_and_new_callable(self) -> None:
+        # return_value is passed in as an argument to the new callable
+        mega_patch = MegaPatch.it(Foo, return_value="val", new_callable=mock.Mock)
+
+        # wart from unittest.mock - new_callable can't be combined with autospec
+        assert Foo() == "val"  # type: ignore
+
+        assert mega_patch.return_value == "val"
+
+    def test_combining_autospec_and_new_callable(self) -> None:
+        with pytest.raises(ValueError) as exc:
+            MegaPatch.it(Foo, autospec=True, new_callable=mock.Mock)
+
+        assert str(exc.value) == "Cannot use 'autospec' and 'new_callable' together"
+
+
+class TestMegaPatchContextManager:
+    def test_patch_context_manager(self) -> None:
+        MegaPatch.it(some_context_manager)
+
+        with some_context_manager():
+            pass
+
+    def test_set_return_value(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_return_value("foo")
+
+        with some_context_manager() as val:
+            assert val == "foo"
+
+    def test_set_side_effect_exception(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_side_effect(Exception())
+
+        with pytest.raises(Exception):
+            with some_context_manager():
+                pass
+
+    def test_set_side_effect_iterable(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_side_effect([1, 2])
+
+        with some_context_manager() as first_val:
+            pass
+        with some_context_manager() as second_val:
+            pass
+
+        assert [first_val, second_val] == [1, 2]
+
+    def test_set_exit_side_effect(self) -> None:
+        megapatch = MegaPatch.it(some_context_manager)
+        megapatch.set_context_manager_exit_side_effect(Exception("Error on file close"))
+
+        with pytest.raises(Exception) as exc:
+            with some_context_manager():
+                pass
+
+        assert str(exc.value) == "Error on file close"
+
+    def test_using_class(self) -> None:
+        lock = SomeLock()
+
+        # check precondition, should raise exception
+        with pytest.raises(Exception):
+            with lock:
+                with lock:
+                    pass
+
+        MegaPatch.it(SomeLock)
+
+        lock = SomeLock()
+
+        # since logic is mocked out, should not raise
+        with lock:
+            with lock:
+                pass
+
+    def test_setting_return_value_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_return_value("foo")
+
+    def test_setting_side_effect_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_side_effect(Exception())
+
+    def test_setting_exit_side_effect_for_non_context_manager(self) -> None:
+        with pytest.raises(ValueError):
+            MegaPatch.it(Foo).set_context_manager_exit_side_effect(Exception())
+
+
+class TestMegaPatchAsContextManager:
+    def test_when_autostart_left_to_default(self) -> None:
+        with MegaPatch.it(Foo.some_method, return_value="val"):
+            assert Foo("s").some_method() == "val"
+
+        assert Foo("s").some_method() == "value"
+
+    def test_when_autostart_is_false(self) -> None:
+        patch = MegaPatch.it(Foo.some_method, return_value="val", autostart=False)
+        with patch:
+            assert Foo("s").some_method() == "val"
+
+        assert Foo("s").some_method() == "value"
+
+
+class TestMegaPatchAsFunctionDecorator:
+    def test_when_autostart_left_to_default(self) -> None:
+        @MegaPatch.it(Foo.some_method, return_value="val")
+        def test() -> None:
+            assert Foo("s").some_method() == "val"
+
+        test()
+
+        assert Foo("s").some_method() == "value"
+
+    def test_when_autostart_is_false(self) -> None:
+        patch = MegaPatch.it(Foo.some_method, return_value="val")
+
+        @patch
+        def test() -> None:
+            assert Foo("s").some_method() == "val"
+
+        test()
+
+        assert Foo("s").some_method() == "value"
+
+    def test_when_exception_thrown(self) -> None:
+        @MegaPatch.it(Foo.some_method, return_value="val")
+        def test() -> None:
+            raise Exception("Err")
+
+        with pytest.raises(Exception):
+            test()
+
+        assert Foo("s").some_method() == "value"
+
+
+class TestMegaPatchNames:
+    def test_megapatch_class(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        assert "name='Foo'" in str(patch.mock)
+
+    def test_megapatch_class_instance(self) -> None:
+        patch = MegaPatch.it(Foo)
+
+        assert "name='Foo()'" in str(patch.return_value)
+
+    @pytest.mark.xfail
+    def test_megapatch_method(self) -> None:
+        # this doesn't work as expected because autospec creates a function
+        # that bypasses MegaMock logic and returns MagicMock
+        patch = MegaPatch.it(Foo.some_method)
+        assert "name='Foo.some_method'" in str(patch.return_value)
+
+
+from megamock.megamocks import MegaMock
+from megamock.megas import Mega
+from megamock.type_util import call
+
+
+class TestMega:
+    class TestCalledOnceWith:
+        def test_return_true(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+
+            assert Mega(mock).called_once_with(1, 2, 3)
+
+        def test_return_false(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+
+            assert Mega(mock).called_once_with("foo") is False
+
+    class TestCalledOnce:
+        def test_return_true(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+
+            assert Mega(mock).called_once()
+
+        def test_return_false(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+            mock(1, 2, 3)
+
+            assert Mega(mock).called_once() is False
+
+    class TestCalled:
+        def test_return_true(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+
+            assert Mega(mock).called()
+
+        def test_return_false(self) -> None:
+            mock = MegaMock()
+
+            assert Mega(mock).called() is False
+
+    class TestNotCalled:
+        def test_return_true(self) -> None:
+            mock = MegaMock()
+
+            assert Mega(mock).not_called()
+
+        def test_return_false(self) -> None:
+            mock = MegaMock()
+            mock()
+
+            assert Mega(mock).not_called() is False
+
+    class TestCalledWith:
+        def test_return_true(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+
+            assert Mega(mock).called_with(1, 2, 3)
+
+        def test_return_false(self) -> None:
+            mock = MegaMock()
+            mock(4, 5, 6)
+
+            assert Mega(mock).called_with(1, 2, 3) is False
+
+    class TestAnyCall:
+        def test_return_true(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+            mock(4, 5, 6)
+
+            assert Mega(mock).any_call(4, 5, 6)
+
+        def test_return_false(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+
+            assert Mega(mock).any_call(4, 5, 6) is False
+
+    class TestHasCalls:
+        def test_return_true(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+            mock(4, 5, 6)
+
+            assert Mega(mock).has_calls([call(4, 5, 6), call(1, 2, 3)], any_order=True)
+
+        def test_return_false(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+
+            assert Mega(mock).has_calls([call(4, 5, 6)], any_order=True) is False
+
+    class TestCallArgs:
+        def test_call_args(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+            mock(4, 5, 6)
+
+            assert Mega(mock).call_args == call(4, 5, 6)
+
+    class TestCallArgsList:
+        def test_call_args_list(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+            mock(4, 5, 6)
+
+            assert Mega(mock).call_args_list == [call(1, 2, 3), call(4, 5, 6)]
+
+    class TestCallCount:
+        def test_call_count(self) -> None:
+            mock = MegaMock()
+            mock(1, 2, 3)
+            mock(4, 5, 6)
+
+            assert Mega(mock).call_count == 2
+

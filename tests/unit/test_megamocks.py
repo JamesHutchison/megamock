@@ -184,6 +184,35 @@ class TestMegaMock:
             mock = MegaMock.this(Foo)
             assert "name='Foo.helpful_manager" in str(mock.helpful_manager)
 
+        @pytest.mark.xfail
+        def test_property_raises_exception_instance(self) -> None:
+            mock = MegaMock.it(Foo)
+            MegaMock(mock).zzz = property(MegaMock(side_effect=Exception("Error!")))
+
+            # cannot raise exception in this way
+            with pytest.raises(Exception):
+                mock.zzz
+
+        @pytest.mark.xfail
+        def test_property_raises_exception_class(self) -> None:
+            mock = MegaMock.the_class(Foo)
+            MegaMock(mock).zzz = property(MegaMock(side_effect=Exception("Error!")))
+
+            # cannot raise exception in this way
+            with pytest.raises(Exception):
+                mock("").zzz
+
+        @pytest.mark.xfail
+        def test_property_workaround(self) -> None:
+            mock = MegaMock.the_class(Foo)
+            Mega(mock.get_time).use_real_logic()  # type: ignore
+            mock._get_time.side_effect = Exception("Property raised error!")
+
+            with pytest.raises(Exception) as exc:
+                mock.get_time
+
+            assert str(exc.value) == "Property raised error!"
+
         def test_method_return_value(self) -> None:
             mock = MegaMock.it(Foo)
             assert "name='Foo.get_a_manager() -> HelpfulManager'" in str(

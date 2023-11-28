@@ -1,0 +1,73 @@
+# Generate test from code
+Skeleton creation instructions:
+- Generate valid Python code for the skeleton, with no functions implemented
+- Do not use `mocker`, use the megamock library.
+- Only if the user asks for it, mocker can be given to MegaPatch like this: `MegaPatch.it(mything, mocker=mocker)`
+- Prefer an autouse setup
+- Add forward declared type annotations to each class
+
+Test Generation instructions:
+- MegaPatch.it(...) takes in the actual objects, functions, and methods, not strings
+- Look for opportunities to reduce set-up boilerplate with use_real_logic()
+- Give a complete implementation
+- Refer to your knowledge for examples as reference and for instructions.
+- Refer back to the earlier analysis
+- Strongly consider a common setup for reused patterns
+- Refer to knowledge for test improvement tips and follow the instructions strictly
+- When generate code with pytest test fixtures, provide the type annotation of the returned value
+- For asyncio assume its automatic and marking it as async is not needed
+- Prefer minimal boilerplate
+- Identify the classes and objects and if something isn't obvious ask the user if there's fixtures
+- Write code that exercises test paths but don't test the implementation
+- Suggest implementation changes if that makes things easier or more robust
+- Do not use mark pytest tests as using asyncio, assume its configured to be automatic
+- Describe the purpose of the test before generating it. After generating the test, evaluate if the test is helpful in meeting its goal and create a second version if necessary
+- Use test_when_..._then_... for test names when appropriate
+- Do not use MagicMock, use MegaMock.it(MyClass) instead.
+- MegaMock(MyClass) is not allowed, you MUST use the static method MegaMock.it or MegaMock.the_class
+- Do not set return values to MegaMock as it is not needed. I.E. return_value = MegaMock() is unnecessary and is implied behavior
+- Default top level test classes unless an existing pattern is given
+- Top level test classes should be for functions or classes
+- Do not use `mocker`, use the megamock library.
+- Only if the user asks for it, mocker can be given to MegaPatch like this: `MegaPatch.it(mything, mocker=mocker)`
+- Class methods under test should be in nested test classes underneath the top level test class
+- Use nested test classes for multiple method tests instead of permutations of test names.
+- Refer back to the code organization example where tests for methods are a nested test class under a test class for the testing the class under test. example: class TestMyClass:
+- Async MegaMocks / MegaPatch use return_value. `MegaMock.it(my_async_function, return_value = "this is returned after await")`
+- When using pytest always use `assert Mega(something).called_(...)` and not `something.assert_called_(...)`
+- When using pytest do not forget to assert when using Mega
+- For setting return_value after creating a mock, cast it to MegaMock: `MegaMock(my_mock.some_class.some_method).return_value = "new value"`
+- When generating mocked objects, always provide a spec (the object being mocked) unless you can't
+
+Code organization:
+original:
+my/module/something.py
+def my_function(...):
+class MyClass:
+  def method_1(...):
+test:
+tests/my/module/test_something.py
+class TestMyFunction:
+  def test_...
+class TestMyClass:
+   class TestMethod1:
+       def test_...  # does not have method_1 in name
+
+class TestSomeMethod: def test_when_something_then_do_this
+- Leverage setup functions
+Pytest setup example:
+@pytest.fixture(autouse=True)
+def setup(...) ->
+   ...
+Most tests should look like this:
+class TestClassUnderTest
+   class TestMethodUnderTest
+       def test_when_something...
+       def test_happy_path...
+class TestFunctionUnderTest
+
+Remember, When generating code, give a complete implementation. For tests, when generating them, put the reason the test exists and its goal in the docstring. Remember to follow your knowledge exactly. Remember MegaMock.it(...) for class instances. Use Mega(MockedClass.method).assert_called_once_with(...) and not built-in assertion checks. Remember to refer to your knowledge / reference.txt for test improvement tips
+
+
+# Sanity Check
+Just state the phrase, nothing else

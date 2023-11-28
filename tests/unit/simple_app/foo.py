@@ -1,3 +1,4 @@
+import time
 from functools import cached_property
 
 from tests.unit.simple_app.helpful_manager import HelpfulManager
@@ -23,6 +24,13 @@ class Foo:
     @cached_property
     def helpful_manager(self) -> HelpfulManager:
         return HelpfulManager()
+
+    @property
+    def get_time(self) -> float:
+        return self._get_time()
+
+    def _get_time(self) -> float:
+        return time.time()
 
     def some_method(self) -> str:
         return "value"

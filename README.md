@@ -3,6 +3,12 @@
 Pew pew! Sane defaults for mocking behavior! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-delimited path strings! Create tests faster than ever!
 
 Supported Python Versions: 3.10+
+
+## New! Use the official GPT!
+A OpenAI ChatGPT+ GPT has been created for MegaMock! Ask questions about library usage or have it generate tests! The GPT has been coached on test generation and should outperform vanilla GPT-4. The GPT is available at: https://chat.openai.com/g/g-DtZiDVQsz-python-megamock-test-generation-assistant
+
+The GPT is experimental. It has a tendency to regress during conversations. If it starts mixing MegaMock and Mock, remind it to double check that its following its instructions. Its been coached on a specific pytest style but you tell it do something else. It tends to be aggressive with the mocking, so you'll need to reel it in and use your judgement on what ultimately makes sense to mock. Don't mock something you don't need to. Don't create unit tests using mocks that will just shadow required integration tests.
+
 ### Installation
 
 Pip installation:
@@ -320,7 +326,6 @@ Turning on real logic:
 
 ```python
 import my_module
-from mega_mock import UseRealLogic
 
 mega_patch = MegaPatch.it(my_module.SomeClass)
 Mega(mega_patch.megainstance.some_pure_logic_method).use_real_logic()
