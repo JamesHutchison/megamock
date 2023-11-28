@@ -1,0 +1,26 @@
+name: Test
+description: Install dependencies and run tests
+runs:
+  using: composite
+  steps:
+  - name: Install dependencies
+    run: |
+      python -m pip install --upgrade poetry
+      poetry install --no-interaction
+    shell: bash
+  - name: Lint with ruff
+    run: |
+      poetry run ruff $MEGAMOCK_FOLDERS
+    shell: bash
+  - name: Lint with mypy
+    run: |
+      poetry run mypy .
+    shell: bash
+  - name: Lint with pyright
+    run: |
+      poetry run pyright
+    shell: bash
+  - name: Test with pytest
+    run: |
+      poetry run pytest
+    shell: bash
