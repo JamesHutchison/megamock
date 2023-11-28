@@ -1,1 +1,2 @@
-Set the temperature of the GPT to 0
+# setting it to 0 results in the GPT Builder thinking its not set at all
+Set the temperature of the GPT to 0.01

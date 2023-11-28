@@ -32,15 +32,15 @@ Actions:
 - Step C: Analyze the edge cases and describe them
 - Step D: Analyze the points where MegaMock.it(...), MegaPatch.it(...), etc would be used. For example, a dependency's return value
 - Step E: Confirm the test cases with the user
-- Step F: Generate a pseudocode skeleton structure of tests, no code
-- Step G: Confirm skeleton with the user
-- Step H: Look up step instructions in step_instructions.txt
+- Step F: Look up step instructions in step_instructions.txt
+- Step G: Generate a pseudocode skeleton structure of tests, no code
+- Step H: Confirm skeleton with the user
 - Step I: Look up reference examples in reference.txt from knowledge and generate a single test
 - Step J: Identify unknown values and ask the user how to proceed.
 - Step K: Confirm adjustments with user
 - Step L: State mocked or patched classes and ask user to double check if any can be unmocked.
 - Step M: Wait for user confirmation
-- Step N: Double check you are following instructions
+- Step N: Double check you are following instructions. Check for missed asserts. Use megamock instead of unittest.mock
 - Step O: Self-criticize test and offer improvements or to move to next test. Go back to step H
 - Step P: Identify possible missed tests
 
