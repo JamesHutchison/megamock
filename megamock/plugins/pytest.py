@@ -17,6 +17,12 @@ def megapatch_contexts() -> Iterable:
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def megapatch_session_contexts() -> Iterable:
+    with MegaPatch.new_context():
+        yield
+
+
 # swap out default mocker if pytest-mock is installed
 try:
     from pytest_mock import MockerFixture  # type: ignore  # noqa  # test for install
