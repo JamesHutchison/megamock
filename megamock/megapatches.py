@@ -75,7 +75,9 @@ class MegaPatchContext:
             pass
 
     def __enter__(self) -> MegaPatchContext:
-        MegaPatch.context_stack.append(self)
+        # with MegaPatch.new_context(): already adds to the stack
+        if self not in MegaPatch.context_stack:
+            MegaPatch.context_stack.append(self)
         return self
 
     def __exit__(self, *args, **kwargs) -> None:
@@ -345,7 +347,10 @@ class MegaPatch(Generic[T, U]):
         if isinstance(thing, cached_property):
             thing = thing.func  # type: ignore
 
-        passed_in_name = argname("thing", func=MegaPatch.it, vars_only=False)
+        # if object has qualified name, use that instead of passed in name
+        passed_in_name = getattr(
+            thing, "__qualname__", argname("thing", func=MegaPatch.it, vars_only=False)
+        )
         corrected_passed_in_name = MegaPatch._correct_for_renamed_import(
             passed_in_name, thing
         )
