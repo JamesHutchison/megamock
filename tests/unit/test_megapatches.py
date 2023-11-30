@@ -32,7 +32,6 @@ from tests.unit.simple_app.uses_nested_classes import (
 
 class TestMegaPatchContext:
     def test_active_patches(self) -> None:
-        "foosssss"
         megapatch_context = MegaPatchContext()
         megapatch = MegaMock.it(MegaPatch)
         megapatch_context.add(megapatch)
@@ -73,23 +72,18 @@ class TestMegaPatchContext:
 
 
 class TestMegaPatchPatching:
-    "Eerrreeeteees"
-
     def test_patch_class_itself(self) -> None:
-        "feeeeeeeeee"
         patch = MegaPatch.it(Foo)
         patch.new_value.z = "a"
 
         assert Foo.z == "a"
         Foo("s")  # should work
-        # something
+
         # sanity check, instance should NOT work because it doesn't support calling
         with pytest.raises(TypeError):
             Foo("s")()  # type: ignore
 
     def test_patch_class_instance_from_type(self) -> None:
-        "ssssstteeeets"
-        "eeeeeffeeeeeeerrr"
         patch = MegaPatch.it(Foo)
         patch.return_value.z = "b"
 
@@ -112,11 +106,7 @@ class TestMegaPatchPatching:
         assert Foo.moo == "dog"
 
     def test_patch_class_method_supports_return_value_as_arg(self) -> None:
-        "fooffff"
-        "barsss"
-        "moo"
         MegaPatch.it(Foo.some_method, return_value="foo")
-
         assert Foo("s").some_method() == "foo"
 
     def test_patch_class_method_from_module_reference(self) -> None:
