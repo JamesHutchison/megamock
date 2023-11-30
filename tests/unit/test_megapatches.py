@@ -587,3 +587,10 @@ class TestMegaPatchNames:
         # that bypasses MegaMock logic and returns MagicMock
         patch = MegaPatch.it(Foo.some_method)
         assert "name='Foo.some_method'" in str(patch.return_value)
+
+
+class TestMegaPatchNewContext:
+    def test_new_context_with_context_manager(self) -> None:
+        context = MegaPatch.new_context()
+        with context:
+            assert len([x for x in MegaPatch.context_stack if x is context]) == 1
