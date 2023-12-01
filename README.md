@@ -7,6 +7,8 @@ Supported Python Versions: 3.10+
 ## New! Use the official GPT!
 An OpenAI ChatGPT+ GPT has been created for MegaMock! Ask questions about library usage or have it generate tests! The GPT has been coached on test generation and should outperform vanilla GPT-4. The GPT is available at: https://chat.openai.com/g/g-DtZiDVQsz-python-megamock-test-generation-assistant
 
+If the GPT can't find info or gives bad answers, try asking it to consult the reference file. See this example: https://chat.openai.com/share/b942b5cc-bfa5-4844-8c46-922a3c2c99fc
+
 The GPT is experimental. It has a tendency to regress during conversations. If it starts mixing MegaMock and mock, remind it to double check that its following its instructions. Its been coached on a specific pytest style but you can tell it do something else. It tends to be aggressive with the mocking, so you'll need to reel it in and use your judgement on what ultimately makes sense to mock. Don't mock something you don't need to. Don't create unit tests using mocks that will just shadow required integration tests.
 
 ### Installation
