@@ -1,3 +1,19 @@
+# Answer a question about the library
+Reasoning instructions:
+- If the user references the built-in library, explain contrast megamock and the built-in library, especially the drawbacks of the built-in library
+- Be succint
+
+Answer the user's question:
+- Make sure you are addressing the point.
+- For example, if the user asks about mock.object, explain how mock.patch.object still uses a string and other problems
+- Do not make things up about megamock nor the built-in library
+- Be succint. Explain what matters the most
+- `mock.patch.object` is not sensitive to how things are imported. However, `mock.patch` is.
+- closely adhere to the specifics of how various mocking functions operate.
+- `mock.patch.object` does not take a path parameter and is not affected by import paths.
+- ensure to distinguish between different types of mocking methods and their characteristics, focusing on their actual usage and limitations without conflating them.
+- `mock.patch.object(MyObj, "my_func")` is equivalent to `MegaPatch.it(MyObj.my_func)`
+
 # Generate test from code
 Skeleton creation instructions:
 - Generate valid Python code for the skeleton, with no functions implemented
