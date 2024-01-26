@@ -19,6 +19,7 @@ from typing import (
     cast,
     get_origin,
     get_type_hints,
+    no_type_check,
     overload,
 )
 from unittest import mock
@@ -685,15 +686,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             **kwargs,
         )
 
-    ##################
-    # DRAGON WARNING
-    ##################
-    # Do NOT type annotate the return type of MegaMock.it and MegaMock.this
-    # Doing this will cause mypy to complain about the union of MegaMock and the spec
-    # because MyPy / python do not (yet) have a true union / merge type.
-    # The hack used here circumvents the attr-check error you would get attempting to
-    # access any attributes of MegaMock
-
+    @no_type_check
     @staticmethod
     def it(
         spec: type[T] | None = None,
@@ -711,7 +704,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         _parent_mega_mock: _MegaMockMixin | None = None,
         # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
-    ):
+    ) -> T | MegaMock[T, MegaMock | T]:
         """
         MegaMock a class instance.
 
@@ -734,31 +727,27 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             a class instance, it would be setting the return value of __call__
         """
 
-        # hack to get static type inference to think this is a true union
-        # of the two classes
-        def helper(obj) -> type[T | MegaMock[T, MegaMock | T]]:
-            return cast(type[MegaMock | T], lambda: obj)
+        return MegaMock(
+            spec=spec,
+            spec_set=spec_set,
+            instance=True,
+            side_effect=side_effect,
+            return_value=return_value,
+            _wraps_mock=_wraps_mock,
+            _parent_mega_mock=_parent_mega_mock,
+            _merged_type=type(MegaMock | spec.__class__),  # type: ignore
+            **kwargs,
+        )
 
-        return helper(
-            MegaMock(
-                spec=spec,
-                spec_set=spec_set,
-                instance=True,
-                side_effect=side_effect,
-                return_value=return_value,
-                _wraps_mock=_wraps_mock,
-                _parent_mega_mock=_parent_mega_mock,
-                _merged_type=type(MegaMock | spec.__class__),  # type: ignore
-                **kwargs,
-            ),
-        )()
-
+    @no_type_check
     @staticmethod
-    def the_class(spec: type[T], *, spec_set: bool = True, **kwargs):
+    def the_class(
+        spec: type[T], *, spec_set: bool = True, **kwargs
+    ) -> type[T] | MegaMock[type[T], MegaMock[Any, Any] | T]:
         """
         MegaMock a class.
 
-        Use `it_class` for creating mock of classes. Use `this` for everything else.
+        Use `the_class` for creating mocks of classes. Use `this` for everything else.
 
         Note that spec_set defaults to True, which means attempts to set
         an attribute that doesn't exist will result in an error.
@@ -778,6 +767,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         """
         return MegaMock._the_class(spec, spec_set=spec_set, _spec_too=spec, **kwargs)
 
+    @no_type_check
     @staticmethod
     def _the_class(
         spec: type[T],
@@ -791,23 +781,16 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
             raise Exception("MegaMock.the_class should be used with classes")
         return_value = MegaMock.it(spec, spec_set=spec_set)
 
-        # hack to get static type inference to think this is a true union
-        # of the two classes
-        def helper(obj) -> type[M | MegaMock[M, MegaMock[T, T] | T]]:
-            return cast(type[MegaMock[M, MegaMock[T, T] | T]], lambda _=_spec_too: obj)
+        return MegaMock(
+            spec=spec,
+            spec_set=spec_set,
+            instance=False,
+            return_value=return_value,
+            _merged_type=type(MegaMock | spec),
+            **kwargs,
+        )
 
-        ret = helper(  # type: ignore  # seems fine to me...
-            MegaMock(
-                spec=spec,
-                spec_set=spec_set,
-                instance=False,
-                return_value=return_value,
-                _merged_type=type(MegaMock | spec),
-                **kwargs,
-            ),
-        )()
-        return ret
-
+    @no_type_check
     @staticmethod
     def this(
         spec: T | None = None,
@@ -827,7 +810,7 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         _parent_mega_mock: _MegaMockMixin | None = None,
         # warning: kwargs to MagicMock may not work correctly! Use at your own risk!
         **kwargs,
-    ):
+    ) -> T | MegaMock[T, MegaMock | T]:
         """
         MegaMock something.
 
@@ -844,30 +827,19 @@ class MegaMock(_MegaMockMixin[T, U], mock.MagicMock, Generic[T, U]):
         :param return_value: The return value to use for the mock.
         """
 
-        # hack to get static type inference to think this is a true union
-        # of the two classes
-        def helper(obj) -> type[T | MegaMock[T, MegaMock | T]]:
-            return cast(type[MegaMock | T], lambda: obj)
-
-        return helper(
-            MegaMock(
-                spec=spec,
-                wraps=wraps,
-                spy=spy,
-                spec_set=spec_set,
-                instance=False,
-                side_effect=side_effect,
-                return_value=return_value,
-                _wraps_mock=_wraps_mock,
-                _parent_mega_mock=_parent_mega_mock,
-                _merged_type=type(MegaMock | spec.__class__),
-                **kwargs,
-            ),
-        )()
-
-    ######################
-    # END DRAGON WARNING
-    ######################
+        return MegaMock(
+            spec=spec,
+            wraps=wraps,
+            spy=spy,
+            spec_set=spec_set,
+            instance=False,
+            side_effect=side_effect,
+            return_value=return_value,
+            _wraps_mock=_wraps_mock,
+            _parent_mega_mock=_parent_mega_mock,
+            _merged_type=type(MegaMock | spec.__class__),
+            **kwargs,
+        )
 
     @staticmethod
     def from_legacy_mock(
