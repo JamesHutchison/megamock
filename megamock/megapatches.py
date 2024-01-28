@@ -6,7 +6,7 @@ import logging
 import sys
 from functools import cached_property
 from types import ModuleType
-from typing import Any, Callable, Generic, Iterable, TypeVar, cast
+from typing import Any, Callable, Generic, Iterable, TypeVar, cast, no_type_check
 from unittest import mock
 
 from varname import argname  # type: ignore
@@ -270,6 +270,7 @@ class MegaPatch(Generic[T, U]):
             new = MegaMock(return_value=return_value)
         return new, return_value
 
+    @no_type_check
     @staticmethod
     def it(
         thing: T,
@@ -282,7 +283,7 @@ class MegaPatch(Generic[T, U]):
         new_callable: Callable | None = None,
         side_effect: Any | None = None,
         **kwargs: Any,
-    ):
+    ) -> MegaPatch[T, MegaMock[T, MegaMock | T] | T]:
         """
         MegaPatch something.
 
@@ -363,7 +364,7 @@ class MegaPatch(Generic[T, U]):
             mocker, module_path, name_to_patch, corrected_passed_in_name, new, kwargs
         )
 
-        mega_patch = MegaPatch[T, type[MegaMock | T]](
+        mega_patch = MegaPatch(
             thing=thing,
             patches=patches,
             new_value=new,
