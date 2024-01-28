@@ -168,8 +168,8 @@ There is no simple way to do this in the built-in mock library.
 With MegaMock, you can do this:
 
 ```python
-MegaPatch.it(MyClass)
-use_real_logic(MyClass.megainstance.some_func)
+patch = MegaPatch.it(MyClass)
+use_real_logic(patch.megainstance.some_func)
 
 do_test_logic(...)
 ```
