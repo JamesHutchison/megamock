@@ -136,6 +136,14 @@ The pytest plugin also automatically stops `MegaPatch`es after each test. If `py
 If you're not using the pytest plugin, import and execution order is important for MegaMock. When running tests, you will need to execute the `start_import_mod`
 function prior to importing any production or test code. You will also want it so the loader is not used in production.
 
+### How Does it Work?
+
+`MegaMock` - Wraps a `MagicMock` and the `spec` object to provide best practice defaults and additional functionality.
+
+`MegaPatch` - The import machinery, which must be installed early, tracks when new references are created via imports and generates a `patch` for all of them.
+
+typing - Generics and Union types are returned and type checking is disabled for it to emulate an intersection type.
+
 -------------------
 
 **Core Classes**
