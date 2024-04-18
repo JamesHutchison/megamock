@@ -2,6 +2,8 @@
 ## About
 This guide explains the role and usage of MegaMock. If you're ready to use MegaMock, skip to the [General Guidance](#general-guidance) section.
 
+I haven't done too many updates recently, but this library is very much still being suported. I've been building https://heavyresume.com and it uses MegaMock and the [PyTest Hot Reloader](https://github.com/JamesHutchison/pytest-hot-reloading) for testing.
+
 ## Why Mock?
 Consider a situation where you have one class, which makes 3rd party API calls. Which
 interface would you rather use?
@@ -423,3 +425,6 @@ which would create an issue. If you get mypy issues, the current
 recommendation is to just use `# type: ignore` and move on with your life.
 Alternatively, you can cast an object to a type to fix a problem, but
 this gets tedius.
+
+# Known Limitations
+`MegaPatch.it` doesn't currently support patching something that is imported within a function while also using the PyTest hot reloader. This appears as an error on re-runs, even if you didn't change anything.
