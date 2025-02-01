@@ -1,5 +1,8 @@
 # **MegaMock** - _The Developer Experience Upgrade for Python Mocking_
 
+Project Status: Hiatus and pending further research
+- pylance broke the functionality that allowed for emulated intersection types by breaking the generic type hints. This occurred sometime mid-2024 and time has not put been in to determine the cause or workaround. As a result, the return typed is `MegaMock[Any]` for many calls rather than a useful one such as `MegaMock[MyClass]`. MyPy has also been not useful.
+
 Pew pew! Sane defaults for mocking behavior! Patch objects, variables, attributes, etc by passing in the thing in question, rather than passing in dot-delimited path strings! Create tests faster than ever!
 
 Supported Python Versions: 3.10+
